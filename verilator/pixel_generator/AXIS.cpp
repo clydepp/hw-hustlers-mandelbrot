@@ -26,7 +26,7 @@ const uint32_t RND_SEED = 1246504138;
 // Output counters
 int xCount = 0, yCount = 0, frameCount = 0;
 vluint64_t checkpoint = 0;
-bool valid, sof, eof;
+bool valid, sof, eol;
 
 int main(int argc, char **argv, char **env)
 {
@@ -39,8 +39,10 @@ int main(int argc, char **argv, char **env)
     tfp->open("AXIS_tb.vcd");
 
     // initialise signals
-    top->clk = 0;
-    top->rst = 0;
+    top->out_stream_aclk = 0;
+    top->s_axi_lite_aclk = 0;
+    top->axi_resetn = 0;
+    top->periph_resetn = 0;
     top->out_stream_tready = 0;
 
     // initialise top variables
@@ -60,24 +62,29 @@ int main(int argc, char **argv, char **env)
     // Reset initial
     for (int i = 0; i < 4; ++i)
     {
-        top->clk = 0;
+        top->out_stream_aclk = 0;
+        top->s_axi_lite_aclk = 0;
         top->eval();
         tfp->dump(2 * i);
-        top->clk = 1;
+        top->out_stream_aclk = 1;
+        top->s_axi_lite_aclk = 1;
         top->eval();
         tfp->dump(2 * i + 1);
     }
-    top->rst = 1;
+    top->axi_resetn = 1;
+    top->periph_resetn = 1;
 
     // main simulation loop
-    for (vluint64_t simcyc = 0; simcyc < ENDTIME; ++simcyc)
+    for (vluint64_t simcyc = 8; simcyc < ENDTIME; ++simcyc)
     {
         // Clock low
-        top->clk = 0;
+        top->out_stream_aclk = 0;
+        top->s_axi_lite_aclk = 0;
         top->eval();
         tfp->dump(2 * simcyc);
         // Clock high
-        top->clk = 1;
+        top->out_stream_aclk = 1;
+        top->s_axi_lite_aclk = 1;
 
         // Ready signal generation
         switch (READY_MODE)
