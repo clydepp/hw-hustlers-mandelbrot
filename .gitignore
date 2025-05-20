@@ -1,0 +1,5 @@
+# Ignore Verilator build directory
+verilator/pixel_generator/obj_dir/
+
+# Ignore VCD waveform files
+*.vcd
