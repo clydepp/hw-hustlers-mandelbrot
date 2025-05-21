@@ -50,7 +50,7 @@ def update_plot(x1, x2, y1, y2):
 
 # Initial parameters
 width, height = 800, 800
-max_iter = 256
+max_iter = 48 # cap the iteration count
 
 # Initial view of the Mandelbrot set
 xmin, xmax = -2.0, 1.0
