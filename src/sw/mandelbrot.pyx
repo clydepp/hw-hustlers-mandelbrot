@@ -1,43 +1,74 @@
 import cython
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import RectangleSelector
 
-try:
-    xrange
-except NameError:
-    xrange = range
+def mandelbrot(c, max_iter):
+    """Calculate if a point is in the Mandelbrot set"""
+    z = c
+    for n in range(max_iter):
+        if abs(z) > 2:
+            return n
+        z = z*z + c
+    return max_iter
+
+def mandelbrot_set(xmin, xmax, ymin, ymax, width, height, max_iter):
+    """Create a Mandelbrot set image"""
+    r1 = np.linspace(xmin, xmax, width)
+    r2 = np.linspace(ymin, ymax, height)
+    return np.array([[mandelbrot(complex(r, i), max_iter) 
+                     for r in r1] for i in r2])
+
+def onselect(eclick, erelease):
+    """Handle zoom selection"""
+    x1, y1 = eclick.xdata, eclick.ydata
+    x2, y2 = erelease.xdata, erelease.ydata
     
-def countIterationsUntilDivergent(c, threshold):
-    z = complex(0, 0)
-    for iteration in xrange(threshold):
-        z = (z*z) + c
+    # Update the plot with the new coordinates
+    update_plot(x1, x2, y1, y2)
 
-        if abs(z) > 4:
-            break
-            pass
-        pass
-    return iteration
+def update_plot(x1, x2, y1, y2):
+    """Update the plot with new coordinates"""
+    global img, ax
+    
+    # Ensure we have valid coordinates
+    if None in (x1, x2, y1, y2):
+        return
+    
+    # Make sure x1 < x2 and y1 < y2
+    x1, x2 = min(x1, x2), max(x1, x2)
+    y1, y2 = min(y1, y2), max(y1, y2)
+    
+    # Calculate the new image
+    mandel_img = mandelbrot_set(x1, x2, y1, y2, width, height, max_iter)
+    
+    # Update the image data
+    img.set_data(mandel_img)
+    img.set_extent((x1, x2, y1, y2))
+    
+    # Redraw
+    ax.figure.canvas.draw_idle()
 
-# plot mandelbrot set
-def mandelbrot(threshold, density):
-    realAxis = np.linspace(-0.22, -0.219, 1000)
-    imaginaryAxis = np.linspace(-0.70, -0.699, 1000)
-    realAxisLen = len(realAxis)
-    imaginaryAxisLen = len(imaginaryAxis)
+# Initial parameters
+width, height = 800, 800
+max_iter = 128
 
-    atlas = np.empty((realAxisLen, imaginaryAxisLen))
+# Initial view of the Mandelbrot set
+xmin, xmax = -2.0, 1.0
+ymin, ymax = -1.5, 1.5
 
-    # fractal colouring
-    for ix in xrange(realAxisLen):
-        for iy in xrange(imaginaryAxisLen):
-            cx = realAxis[ix]
-            cy = imaginaryAxis[iy]
-            c = complex(cx, cy)
+# Create the initial plot
+fig, ax = plt.subplots(figsize=(10, 10))
+mandel_img = mandelbrot_set(xmin, xmax, ymin, ymax, width, height, max_iter)
+img = ax.imshow(mandel_img, extent=(xmin, xmax, ymin, ymax), cmap='hot', origin='lower')
 
-            atlas[ix, iy] = countIterationsUntilDivergent(c, threshold)
-            pass
-        pass
-    plt.imshow(atlas.T, interpolation="nearest")
-    plt.show()
+# Add rectangle selector for zooming
+rs = RectangleSelector(ax, onselect, useblit=True,
+                       button=[1],  # Left mouse button
+                       minspanx=5, minspany=5,
+                       spancoords='pixels',
+                       interactive=True)
 
-mandelbrot(120, 1000)
+plt.title("Click and drag to zoom. Right-click to reset.")
+plt.colorbar(img, ax=ax, label='Iterations')
+plt.show()
