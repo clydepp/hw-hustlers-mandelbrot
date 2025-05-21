@@ -21,7 +21,7 @@ enum ReadyMode
 
 // prbs for random ready
 const int READY_MODE = RANDOM_READY;
-const uint32_t RND_SEED = 1246504138;
+const int RND_SEED = 1246504138;
 
 // Output counters
 int xCount = 0, yCount = 0, frameCount = 0;
@@ -56,7 +56,7 @@ int main(int argc, char **argv, char **env)
     top->s_axi_lite_wvalid = 0;
 
     // PRBS for random ready
-    uint32_t prbs = RND_SEED;
+    int prbs = RND_SEED;
     int ready = 0;
 
     // Reset initial
