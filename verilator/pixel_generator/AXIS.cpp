@@ -56,11 +56,11 @@ int main(int argc, char **argv, char **env)
     top->s_axi_lite_wvalid = 0;
 
     // PRBS for random ready
-    int prbs = RND_SEED;
+    top->prbs = RND_SEED;
     int ready = 0;
 
     // Reset initial
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 2; ++i)
     {
         top->out_stream_aclk = 0;
         top->s_axi_lite_aclk = 0;
@@ -71,11 +71,20 @@ int main(int argc, char **argv, char **env)
         top->eval();
         tfp->dump(2 * i + 1);
     }
+    // top->out_stream_aclk = 0;
+    // top->s_axi_lite_aclk = 0;
+    // top->eval();
+    // tfp->dump(2 * 0);
+    // top->out_stream_aclk = 1;
+    // top->s_axi_lite_aclk = 1;
+    // top->eval();
+    // tfp->dump(2 * 0 + 1);
     top->axi_resetn = 1;
     top->periph_resetn = 1;
+    top->out_stream_tready = ready;
 
     // main simulation loop
-    for (vluint64_t simcyc = 8; simcyc < ENDTIME; ++simcyc)
+    for (vluint64_t simcyc = 2; simcyc < ENDTIME; ++simcyc)
     {
         // Clock low
         top->out_stream_aclk = 0;
@@ -93,8 +102,8 @@ int main(int argc, char **argv, char **env)
             ready = 1;
             break;
         case RANDOM_READY:
-            prbs = (prbs << 1) | (((prbs >> 32) ^ (~(prbs >> 19))) & 1);
-            ready = (prbs >> 32) & 1;
+            top->prbs = (top->prbs << 1) | (((top->prbs >> 32) ^ (~(top->prbs >> 19))) & 1);
+            ready = (top->prbs >> 32) & 1;
             break;
         case READY_AFTER_VALID:
             if (top->out_stream_tvalid && ready)
