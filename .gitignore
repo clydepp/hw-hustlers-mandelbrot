@@ -1,5 +1,5 @@
 # Ignore Verilator build directory
-**/objdir/
+**/obj_dir/
 
 # Ignore VCD waveform files
 *.vcd
