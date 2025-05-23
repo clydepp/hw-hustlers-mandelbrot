@@ -10,9 +10,15 @@ module depth_calculator #(
     input logic              sysclk,
     input logic              start,         // Controls when we begin calculating
     input logic              reset,
+
+
+
+
+
+ // verilator lint_off UNUSED
     input logic [9:0]        x,
     input logic [8:0]        y,
- 
+ // verilator lint_on UNUSED
     input logic [31:0]       re_c,
     input logic [31:0]       im_c,
     output logic [9:0]       final_depth,
@@ -32,8 +38,9 @@ logic signed [31:0] im_z;
 
 logic signed [63:0] re_z_2;
 logic signed [63:0] im_z_2;
+ // verilator lint_off UNUSED
 logic signed [63:0] cp;                             // cross product 2 * re_z * im_z
-
+ // verilator lint_on UNUSED
 logic [9:0] max_iter = 1000;                          // need to get maximum depth from registers when actually implemented
 
 logic [9:0] depth;
