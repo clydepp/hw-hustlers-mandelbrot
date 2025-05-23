@@ -3,3 +3,6 @@
 
 # Ignore VCD waveform files
 *.vcd
+
+#ignore csv
+*.csv
