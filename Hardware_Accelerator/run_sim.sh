@@ -21,8 +21,8 @@ if [ ! -f "${TB_DIR}/${TOP}.cpp" ]; then
   echo "ERROR: testbench file '${TB_DIR}/${TOP}.cpp' not found." >&2
   exit 1
 fi
-if [ ! -f "${RTL_DIR}/${TOP}.sv" ]; then
-  echo "ERROR: RTL file '${RTL_DIR}/${TOP}.sv' not found." >&2
+if [ ! -f "${RTL_DIR}/${TOP}.v" ] && [ ! -f "${RTL_DIR}/${TOP}.sv" ]; then
+  echo "ERROR: RTL file '${RTL_DIR}/${TOP}.v' or '${RTL_DIR}/${TOP}.sv' not found." >&2
   exit 1
 fi
 
@@ -34,7 +34,7 @@ rm -rf obj_dir
 rm -f waveform.vcd
 
 # Run Verilator from inside TB_DIR, pointing at RTL up one level
-verilator --cc   ../${RTL_DIR}/*.sv \
+verilator --cc   ../${RTL_DIR}/*.v ../${RTL_DIR}/*.sv \
           --exe  ${TOP}.cpp     \
           --top-module ${TOP}   \
           --trace                \
