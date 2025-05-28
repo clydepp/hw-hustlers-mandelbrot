@@ -25,13 +25,13 @@ class Application {
     m_selectionRect.setOutlineThickness(3);
 
     // Load font and create buttons
-    if (!m_font.loadFromFile("TimesNewRoman.ttf")) {
-     // std::cout << "Please, provide a Font!\n";
-    }
-    // createButton(width - 150, 5, m_changeColorButton, m_changeColorButtonText,
-    //              "Change color");
-    // createButton(width - 150, 50, m_resetZoomingButton,
-    //              m_resetZoomingButtonText, "Reset Zooming");
+    // if (!m_font.loadFromFile("TimesNewRoman.ttf")) {
+    //  // std::cout << "Please, provide a Font!\n";
+    // }
+    // // createButton(width - 150, 5, m_changeColorButton, m_changeColorButtonText,
+    // //              "Change color");
+    // // createButton(width - 150, 50, m_resetZoomingButton,
+    // //              m_resetZoomingButtonText, "Reset Zooming");
   }
 
   void run() {
@@ -72,21 +72,17 @@ class Application {
   }
 
   sf::Color getColor(int iter) {
-    if (iter < m_fractal.MAX_ITER) {
-      switch (m_COLOR) {
-        case 1:
-          return sf::Color(0, 255 * iter / m_fractal.MAX_ITER,
-                           255 * iter / m_fractal.MAX_ITER);
-        case 2:
-          return sf::Color(255 * iter / m_fractal.MAX_ITER, 0,
-                           255 * iter / m_fractal.MAX_ITER);
-        case 3:
-          return sf::Color(255 * iter / m_fractal.MAX_ITER,
-                           255 * iter / m_fractal.MAX_ITER, 0);
-      }
+    if (iter == m_fractal.MAX_ITER) {
+        return sf::Color::Black;
     }
-    return sf::Color::Black;
-  }
+
+    float t = static_cast<float>(iter) / m_fractal.MAX_ITER;
+    float r = 9 * (1 - t) * t * t * t;
+    float g = 15 * (1 - t) * (1 - t) * t * t;
+    float b = 8.5 * (1 - t) * (1 - t) * (1 - t) * t;
+
+    return sf::Color(r * 255, g * 255, b * 255);
+}
 
   void handleEvent(sf::Event& event) {
     if (event.type == sf::Event::MouseButtonPressed &&

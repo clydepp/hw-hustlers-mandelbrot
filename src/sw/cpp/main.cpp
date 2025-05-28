@@ -9,8 +9,8 @@
 #include "Application.cpp"
 
 int main() {
-  int width = 640;
-  int height = 480;
+  int width = 1152;
+  int height = 864;
   int maxIter = 200;
   int numThreads = std::thread::
       hardware_concurrency();  // Number of threads for multithreading
