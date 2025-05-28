@@ -6,3 +6,43 @@
 
 #ignore csv
 *.csv
+
+# Vivado build folders
+*.jou
+*.log
+*.str
+*.xml
+*.xpr
+*.bit
+*.bin
+*.dcp
+*.tcl
+*.vcd
+*.wdb
+*.pb
+
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.srcs/
+*.webtalk/
+*.temp/
+*.xgui/
+
+# PYNQ overlays
+*.hwh
+*.tcl
+*.bit
+*.json
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Backup
+*~
