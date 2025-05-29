@@ -32,7 +32,7 @@ output          s_axi_lite_rvalid,
 
 input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
-input           s_axi_lite_wvalid,
+input           s_axi_lite_wvalid
 
 // output [7:0] r_out,
 // output [7:0] g_out,
@@ -181,13 +181,19 @@ assign s_axi_lite_bvalid = (writeState == AWAIT_RESP);
 assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 //FSM to control signals
-typedef enum logic [1:0]{
-    IDLE = 2'b00,
-    START = 2'b01,
-    WAIT_DONE = 2'b10,
-    SEND_PIXEL = 2'b11
-} fsm_state_engine;
-fsm_state_engine state = IDLE;
+// typedef enum logic [1:0]{
+//     IDLE = 2'b00,
+//     START = 2'b01,
+//     WAIT_DONE = 2'b10,
+//     SEND_PIXEL = 2'b11
+// } fsm_state_engine;
+
+localparam IDLE = 2'b00;
+localparam START = 2'b01;
+localparam WAIT_DONE = 2'b10;
+localparam SEND_PIXEL = 2'b11;
+
+reg [1:0] state = IDLE;
 reg start_reg;
 wire start;
 wire valid_int;
@@ -195,7 +201,7 @@ assign start = start_reg;
 reg valid_int_reg;
 assign valid_int = valid_int_reg;
 
-always_ff @(posedge out_stream_aclk or negedge periph_resetn) begin
+always @(posedge out_stream_aclk) begin
     if (!periph_resetn) begin
         state <= IDLE;
         start_reg <= 0;
@@ -234,8 +240,8 @@ reg [10:0] y;
 reg [23:0] engine_color;
 reg engine_done;
 wire reset = ~periph_resetn;
-reg [WORD_LENGTH-1:0] re_c;
-reg [WORD_LENGTH-1:0] im_c;
+wire [WORD_LENGTH-1:0] re_c;
+wire [WORD_LENGTH-1:0] im_c;
 wire first = (x == 0) & (y==0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
