@@ -285,7 +285,7 @@ always @(posedge out_stream_aclk) begin
         y <= 0;
     end
 end
-assign ready = out_stream_tready & out_stream_tvalid;
+//assign ready = out_stream_tready & out_stream_tvalid;
 
 // wire [7:0] r, g, b;
 // assign r = engine_color[23:16];
