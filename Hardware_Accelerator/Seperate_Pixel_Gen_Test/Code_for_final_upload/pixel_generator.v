@@ -56,6 +56,14 @@ input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
 input           s_axi_lite_wvalid
 
+// Added below to make visible for testing
+
+// output logic [7:0] r_out, g_out, b_out,
+
+// output logic [9:0] x_out,
+// output logic [8:0] y_out,
+
+// output logic valid_int_out
 );
 
 localparam X_SIZE = 640;
@@ -236,10 +244,17 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
+
+// Need to define all logic
+
+wire [31:0] re_c, im_c;
+wire [9:0] final_depth;
+wire valid_int;
+
 depth_calculator u_depth_calc (
   .sysclk       (out_stream_aclk), // system clock
-  .start        (start), // start pulse
-  .reset        (periph_resetn), // synchronous reset
+  .start        (ready), // start pulse
+  .reset        (~periph_resetn), // synchronous reset
   .x            (x), // pixel X coordinate [9:0]
   .y            (y), // pixel Y coordinate [8:0]
   .re_c         (re_c), // input real part of c (Q-format)
@@ -256,7 +271,8 @@ pixel_to_complex mapper (
 .im_part    (im_c)
 );
 
-wire start = 1'b1;
+//wire valid_int = 1'b1;
+//wire start = 1'b1;
 
 //wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
 // valid_int high when you have finished generating a pixel
@@ -265,9 +281,68 @@ wire start = 1'b1;
 
 
 wire [7:0] r, g, b;
-assign r = 8'b0;
-assign g = 8'b0;
-assign b = final_depth / 5; // Done to assure output is less than 255
+reg delayed_valid_int;
+
+// always @(posedge out_stream_aclk) begin
+//     r <= final_depth * 3 / 2;
+//     g <= final_depth * 3 / 2;
+//     b <= final_depth * 3 / 2;
+//     delayed_valid_int <= valid_int;
+// end
+
+assign r = final_depth * 20;
+assign g = final_depth * 20;
+assign b = final_depth * 20;
+
+
+// assign r_out = r;
+// assign g_out = g;
+// assign b_out = b;
+
+// assign x_out = x;
+// assign y_out = y;
+
+// assign valid_int_out = valid_int;
+
+// If you can't see something on the top level look to make sure all signals connected properly
+
+// // DEFAULT PIXEL_GEN START //
+
+// reg [9:0] x;
+// reg [8:0] y;
+
+// wire first = (x == 0) & (y==0);
+// wire lastx = (x == X_SIZE - 1);
+// wire lasty = (y == Y_SIZE - 1);
+// wire [7:0] frame = regfile[0];
+// wire ready;
+
+// always @(posedge out_stream_aclk) begin
+//     if (periph_resetn) begin
+//         if (ready & valid_int) begin
+//             if (lastx) begin
+//                 x <= 9'd0;
+//                 if (lasty) y <= 9'd0;
+//                 else y <= y + 9'd1;
+//             end
+//             else x <= x + 9'd1;
+//         end
+//     end
+//     else begin
+//         x <= 0;
+//         y <= 0;
+//     end
+// end
+
+// wire valid_int = 1'b1;
+
+// wire [7:0] r, g, b;
+// assign r = x[7:0] + frame;
+// assign g = y[7:0] + frame;
+// assign b = x[6:0]+y[6:0] + frame;
+
+
+// // DEFAULT PIXEL_Gen END //
 
 packer pixel_packer(    .aclk(out_stream_aclk),
                         .aresetn(periph_resetn),

@@ -34,7 +34,7 @@ logic signed [63:0] re_z_2;
 logic signed [63:0] im_z_2;
 logic signed [63:0] cp;                             // cross product 2 * re_z * im_z
 
-logic [9:0] max_iter = 1000;                          // need to get maximum depth from registers when actually implemented
+logic [9:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
 
 logic [9:0] depth;
 
@@ -64,7 +64,7 @@ always_ff @(posedge sysclk, posedge reset) begin
                 re_z <= 0;
                 im_z <= 0;
                 depth <= 0;
-                done <= 0;
+                done <= 0;              // important change take note
                 final_depth <= 0;
             end
         end
@@ -112,6 +112,7 @@ always_comb begin
     logic escaped;
     escaped = (re_z_2 + im_z_2) > THRESHOLD;
 
+    next_state = current_state;
     
     case(current_state)
 

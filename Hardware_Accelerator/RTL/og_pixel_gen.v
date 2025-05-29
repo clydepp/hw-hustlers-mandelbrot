@@ -217,7 +217,7 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
-wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
+wire valid_int = 1'b1;
 
 wire [7:0] r, g, b;
 assign r = x[7:0] + frame;

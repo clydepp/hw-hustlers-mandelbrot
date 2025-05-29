@@ -191,7 +191,7 @@ assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 
 
-reg [9:0] x;  // Will want to take input for x and y to get screen dimensions
+reg [9:0] x;
 reg [8:0] y;
 
 wire first = (x == 0) & (y==0);
@@ -199,25 +199,6 @@ wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 wire [7:0] frame = regfile[0];
 wire ready;
-
-// always @(posedge out_stream_aclk) begin
-//     if (periph_resetn) begin
-//         if (ready & valid_int) begin
-//             if (lastx) begin
-//                 x <= 9'd0;
-//                 if (lasty) y <= 9'd0;
-//                 else y <= y + 9'd1;
-//             end
-//             else x <= x + 9'd1;
-//         end
-//     end
-//     else begin
-//         x <= 0;
-//         y <= 0;
-//     end
-// end
-
-// localparams give the x and y size currently
 
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
@@ -236,38 +217,12 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
-depth_calculator u_depth_calc (
-  .sysclk       (out_stream_aclk), // system clock
-  .start        (start), // start pulse
-  .reset        (periph_resetn), // synchronous reset
-  .x            (x), // pixel X coordinate [9:0]
-  .y            (y), // pixel Y coordinate [8:0]
-  .re_c         (re_c), // input real part of c (Q-format)
-  .im_c         (im_c), // input imag part of c (Q-format)
-  .final_depth  (final_depth), // final depth at done [9:0]
-  .done         (valid_int)  // done flag
-);
-
-pixel_to_complex mapper (
-.clk        (out_stream_aclk),
-.x         (x),
-.y         (y),
-.real_part  (re_c),
-.im_part    (im_c)
-);
-
-wire start = 1'b1;
-
-//wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
-// valid_int high when you have finished generating a pixel
-
-
-
+wire valid_int = 1'b1;
 
 wire [7:0] r, g, b;
-assign r = 8'b0;
-assign g = 8'b0;
-assign b = final_depth / 5; // Done to assure output is less than 255
+assign r = x[7:0] + frame;
+assign g = y[7:0] + frame;
+assign b = x[6:0]+y[6:0] + frame;
 
 packer pixel_packer(    .aclk(out_stream_aclk),
                         .aresetn(periph_resetn),

@@ -1,38 +1,33 @@
-`timescale 1ns / 1ps
-module pixgen_tb;
-
-    //Ready signal mode
-    localparam ALWAYS_READY = 1;        //Ready signal is always true
-    localparam RANDOM_READY = 2;        //Ready signal is true 50% of the time according to pseudo-random sequence
-    localparam READY_AFTER_VALID = 3;   //Ready signal goes true after valid is true, then goes false
+module top#(
+     //Ready signal mode
+    localparam ALWAYS_READY = 1,        //Ready signal is always true
+    localparam RANDOM_READY = 2,        //Ready signal is true 50% of the time according to pseudo-random sequence
+    localparam READY_AFTER_VALID = 3,   //Ready signal goes true after valid is true, then goes false
     
-    parameter READY_MODE = RANDOM_READY;
+    parameter READY_MODE = RANDOM_READY,
 
 
-    parameter TIMEOUT = 1000;           //Time to wait for valid to be true
-    parameter X_SIZE = 480;             //X dimension of image in words (words = pixels * 3/4)
-    parameter Y_SIZE = 480;             //Y dimension of image
-    parameter ENDTIME = 10000000;       //End time of simulation
-    parameter RND_SEED = 1246504138;    //Random seed for ready signal generation
+    parameter TIMEOUT = 1000,           //Time to wait for valid to be true
+    parameter X_SIZE = 480,             //X dimension of image in words (words = pixels * 3/4)
+    parameter Y_SIZE = 480,             //Y dimension of image
+    parameter RND_SEED = 1246504138    //Random seed for ready signal generation
     
-    //Simulation configuration
-    initial begin
-        $dumpfile("test.vcd");
-        $dumpvars(0,pixgen_tb);
-        #ENDTIME $finish;
-    end
+)(
+    input  logic        clk,
+    input  logic        rst
+    //input  logic        ready,           // Driven from C++ TB
+    //output logic [31:0] tdata,          //packed pixel data
+    // output logic        eol,
+    // output logic        valid,
+    // output logic        sof
+);
 
-    //Generate the clock input
-    reg clk = 0;
-    always #5 clk = !clk;
-
-    //Generate the reset input
-    reg rst = 0;
-    initial #16 rst = 1;
 
     //Instantiate the pixel generator
     wire valid, sof, eol;
+
     pixel_generator p1 (
+
         .out_stream_aclk(clk),
         .s_axi_lite_aclk(clk),
         .axi_resetn(rst),
@@ -66,8 +61,8 @@ module pixgen_tb;
 
         .s_axi_lite_wdata(32'h0),
         .s_axi_lite_wready(),
-        .s_axi_lite_wvalid(1'b0));
-
+        .s_axi_lite_wvalid(1'b0)
+    );
 
     //Ready signal generation
     reg [32:0] prbs = RND_SEED;
@@ -100,7 +95,7 @@ module pixgen_tb;
         endcase
 
     end
-    
+
     //Output word counting
     integer xCount = 0;
     integer yCount = 0;
@@ -162,4 +157,4 @@ module pixgen_tb;
 
     end
 
-endmodule
+endmodule 

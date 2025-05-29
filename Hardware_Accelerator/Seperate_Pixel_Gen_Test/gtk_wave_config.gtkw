@@ -1,0 +1,36 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Wed May 28 10:55:43 2025
+[*]
+[dumpfile] "/home/alex/Documents/hardware_hustlers/hw-hustlers-mandelbrot/Hardware_Accelerator/Seperate_Pixel_Gen_Test/AXIS_tb_new.vcd"
+[dumpfile_mtime] "Wed May 28 10:35:47 2025"
+[dumpfile_size] 1516075932
+[savefile] "/home/alex/Documents/hardware_hustlers/hw-hustlers-mandelbrot/Hardware_Accelerator/Seperate_Pixel_Gen_Test/gtk_wave_config.gtkw"
+[timestart] 48
+[size] 1908 1107
+[pos] -1 -1
+*-2.000000 61 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.top.
+[sst_width] 257
+[signals_width] 269
+[sst_expanded] 1
+[sst_vpaned_height] 330
+@28
+TOP.top.clk
+TOP.top.p1.lastx
+TOP.top.p1.lasty
+[color] 5
+TOP.top.valid_int
+[color] 5
+TOP.top.p1.ready
+@22
+[color] 2
+TOP.top.y[8:0]
+[color] 2
+TOP.top.x[9:0]
+TOP.top.g[7:0]
+@29
+TOP.top.p1.out_stream_tready
+[pattern_trace] 1
+[pattern_trace] 0
