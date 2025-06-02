@@ -5,6 +5,8 @@
         "thread": "cpp",
         "vector": "cpp",
         "iostream": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "ctime": "cpp",
+        "cstdlib": "cpp"
     }
 }

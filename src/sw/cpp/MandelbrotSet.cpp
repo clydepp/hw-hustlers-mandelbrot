@@ -34,8 +34,7 @@ class MandelbrotSet {
     for (int i = 0; i < NUM_THREADS; ++i) {
       int startRow = i * rowsPerThread;
       int endRow = (i == NUM_THREADS - 1) ? HEIGHT : (i + 1) * rowsPerThread;
-      threads.push_back(std::thread(&MandelbrotSet::renderFractalPart, this,
-                                    startRow, endRow));
+      threads.push_back(std::thread(&MandelbrotSet::renderFractalPart, this, startRow, endRow));
     }
 
     for (auto& thread : threads) {
