@@ -205,27 +205,8 @@ reg [8:0] y;
 wire first = (x == 0) & (y==0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
-wire [7:0] frame = regfile[0];
+//wire [7:0] frame = regfile[0];
 wire ready;
-
-// always @(posedge out_stream_aclk) begin
-//     if (periph_resetn) begin
-//         if (ready & valid_int) begin
-//             if (lastx) begin
-//                 x <= 9'd0;
-//                 if (lasty) y <= 9'd0;
-//                 else y <= y + 9'd1;
-//             end
-//             else x <= x + 9'd1;
-//         end
-//     end
-//     else begin
-//         x <= 0;
-//         y <= 0;
-//     end
-// end
-
-// localparams give the x and y size currently
 
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
@@ -247,9 +228,19 @@ end
 
 // Need to define all logic
 
+// Idea for simulation: Make valid_int high after 100 clock cycles once final values been established
+
 wire [31:0] re_c, im_c;
-wire [9:0] final_depth;
+wire [7:0] final_depth;
 wire valid_int;
+
+// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
+
+// reg delayed_valid_int;
+
+// always @(posedge out_stream_aclk) begin
+//     delayed_valid_int <= valid_int;
+// end
 
 depth_calculator u_depth_calc (
   .sysclk       (out_stream_aclk), // system clock
@@ -281,7 +272,6 @@ pixel_to_complex mapper (
 
 
 wire [7:0] r, g, b;
-reg delayed_valid_int;
 
 // always @(posedge out_stream_aclk) begin
 //     r <= final_depth * 3 / 2;
@@ -290,9 +280,10 @@ reg delayed_valid_int;
 //     delayed_valid_int <= valid_int;
 // end
 
-assign r = final_depth * 20;
-assign g = final_depth * 20;
-assign b = final_depth * 20;
+assign r = final_depth * 10;
+assign g = final_depth * 10;
+assign b = final_depth * 10;
+
 
 
 // assign r_out = r;

@@ -5,17 +5,24 @@
 
 
 module depth_calculator #(
-    parameter   FRAC = 16
+    parameter   int FRAC = 60,
+    parameter   int WORD_LENGTH = 64
 )(
     input logic              sysclk,
     input logic              start,         // Controls when we begin calculating
     input logic              reset,
-    input logic [9:0]        x,
-    input logic [8:0]        y,
- 
-    input logic [31:0]       re_c,
-    input logic [31:0]       im_c,
-    output logic [7:0]       final_depth,   // Make sure depth and final_depth are of same width
+
+
+
+
+
+ // verilator lint_off UNUSED
+  // input logic [10:0]        x,
+  // input logic [10:0]        y,
+ // verilator lint_on UNUSED
+    input logic [WORD_LENGTH-1:0]       re_c,
+    input logic [WORD_LENGTH-1:0]       im_c,
+    output logic [9:0]       final_depth,
     output logic             done           // might need to make it such that it can output x and y
 );
 
@@ -27,20 +34,19 @@ typedef enum logic [1:0] {
 
 my_states current_state, next_state;
 
-logic signed [31:0] re_z;
-logic signed [31:0] im_z;
+logic signed [WORD_LENGTH-1:0] re_z;
+logic signed [WORD_LENGTH-1:0] im_z;
 
-logic signed [63:0] re_z_2;
-logic signed [63:0] im_z_2;
-logic signed [63:0] cp;                             // cross product 2 * re_z * im_z
+logic signed [(2*WORD_LENGTH)-1:0] re_z_2;
+logic signed [(2*WORD_LENGTH)-1:0] im_z_2;
+ // verilator lint_off UNUSED
+logic signed [(2*WORD_LENGTH)-1:0] cp;                             // cross product 2 * re_z * im_z
+ // verilator lint_on UNUSED
+logic [9:0] max_iter = 200;                          // need to get maximum depth from registers when actually implemented
 
-logic [9:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
+logic [9:0] depth;
 
-logic [7:0] depth;
-
-//logic [2:0] count;      // Created in testing to see gap between signals to hopefully fix issues
-
-localparam logic [63:0] THRESHOLD = 64'd4 * (1<<FRAC) * (1<<FRAC);
+localparam logic [(2*WORD_LENGTH)-1:0] THRESHOLD = 128'd4 * (1<<FRAC) * (1<<FRAC);
 
 // next_state logic
 
@@ -51,13 +57,14 @@ always_ff @(posedge sysclk, posedge reset) begin
         re_z <= 0;
         im_z <= 0;
         depth <= 0;
-        done <= 0;
+        done <= 0; //switch to 1
         final_depth <= 0;
     end
     
     else begin
 
     current_state <= next_state;
+    
     case(current_state)
 
         IDLE: begin
@@ -65,7 +72,7 @@ always_ff @(posedge sysclk, posedge reset) begin
                 re_z <= 0;
                 im_z <= 0;
                 depth <= 0;
-                done <= 0;              // important change take note
+                done <= 0;
                 final_depth <= 0;
             end
         end
@@ -73,14 +80,14 @@ always_ff @(posedge sysclk, posedge reset) begin
 
         // need to compute Z_re
         ITERATING: begin
-            re_z <= re_z_2[32+FRAC-1 -: 32]  // take the middle DW bits: Q-format crop
-                    - im_z_2[32+FRAC-1 -: 32]
-                    + re_c;
-            im_z <= cp [32+FRAC-1 -: 32]
-                    + im_c;
-        
-            final_depth <= final_depth + 1;
-            done <= 0;
+            // re_z <= re_z_2[WORD_LENGTH+FRAC-1 -: WORD_LENGTH]  // take the middle DW bits: Q-format crop
+            //         - im_z_2[WORD_LENGTH+FRAC-1 -: WORD_LENGTH]
+            //         + re_c;
+            // im_z <= cp [WORD_LENGTH+FRAC-1 -: WORD_LENGTH]
+            //         + im_c;
+           re_z <= $signed(($signed(re_z_2) >>> FRAC) - ($signed(im_z_2) >>> FRAC) + re_c);
+            im_z <= $signed(($signed(cp) >>> FRAC) + im_c);
+            depth <= depth + 1;
         end
 
         FINISHED: begin
@@ -114,23 +121,14 @@ always_comb begin
     logic escaped;
     escaped = (re_z_2 + im_z_2) > THRESHOLD;
 
-    next_state = current_state;
     
     case(current_state)
 
-    IDLE: begin
-        if(start) next_state = ITERATING;
-//        done = 1;
-    end
+    IDLE: if(start) next_state = ITERATING;
 
-    ITERATING: begin
-        if(escaped || max_iter == depth) next_state = FINISHED;
-//        done = 0;
-    end
-    FINISHED: begin 
-        next_state = IDLE;
-//        done = 1;
-    end
+    ITERATING: if(escaped || max_iter == depth) next_state = FINISHED;
+
+    FINISHED: next_state = IDLE;
 
     default: next_state = IDLE;
     endcase

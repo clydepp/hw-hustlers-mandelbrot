@@ -280,9 +280,31 @@ wire [7:0] r, g, b;
 //     delayed_valid_int <= valid_int;
 // end
 
-assign r = final_depth * 10;
-assign g = final_depth * 10;
-assign b = final_depth * 10;
+assign r = final_depth * 1;
+assign g = final_depth * 4;
+assign b = final_depth * 5;
+
+// logic [9:0] final_depth; // Assume it's in 0–50
+// real x = final_depth / 50.0;
+
+// if (x < 0.25) begin
+//     r = 0;
+//     g = x * 4 * 255;
+//     b = 255;
+// end else if (x < 0.5) begin
+//     r = 0;
+//     g = 255;
+//     b = (1 - (x - 0.25) * 4) * 255;
+// end else if (x < 0.75) begin
+//     r = (x - 0.5) * 4 * 255;
+//     g = 255;
+//     b = 0;
+// end else begin
+//     r = 255;
+//     g = (1 - (x - 0.75) * 4) * 255;
+//     b = 0;
+// end
+
 
 
 

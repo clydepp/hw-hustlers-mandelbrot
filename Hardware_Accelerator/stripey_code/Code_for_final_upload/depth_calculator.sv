@@ -15,7 +15,7 @@ module depth_calculator #(
  
     input logic [31:0]       re_c,
     input logic [31:0]       im_c,
-    output logic [7:0]       final_depth,   // Make sure depth and final_depth are of same width
+    output logic [7:0]       final_depth,
     output logic             done           // might need to make it such that it can output x and y
 );
 
@@ -36,11 +36,14 @@ logic signed [63:0] cp;                             // cross product 2 * re_z * 
 
 logic [9:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
 
-logic [7:0] depth;
+logic [9:0] depth;
 
 //logic [2:0] count;      // Created in testing to see gap between signals to hopefully fix issues
 
 localparam logic [63:0] THRESHOLD = 64'd4 * (1<<FRAC) * (1<<FRAC);
+
+
+logic [2:0] count; 
 
 // next_state logic
 
@@ -58,6 +61,7 @@ always_ff @(posedge sysclk, posedge reset) begin
     else begin
 
     current_state <= next_state;
+
     case(current_state)
 
         IDLE: begin
@@ -79,13 +83,16 @@ always_ff @(posedge sysclk, posedge reset) begin
             im_z <= cp [32+FRAC-1 -: 32]
                     + im_c;
         
-            final_depth <= final_depth + 1;
-            done <= 0;
+            depth <= depth + 1;
+            if(re_z_2 + im_z_2 > THRESHOLD || max_iter == depth)begin
+                final_depth <= depth + 1;
+                done <= 1;
+            end
         end
 
         FINISHED: begin
+            // final_depth <= depth-1;
             done <= 1;
-            final_depth <= depth-1;
         end
 
         default: begin

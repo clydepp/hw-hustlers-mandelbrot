@@ -54,16 +54,16 @@ output          s_axi_lite_rvalid,
 
 input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
-input           s_axi_lite_wvalid,
+input           s_axi_lite_wvalid
 
-// Added below to make visible for testing
+// // Added below to make visible for testing
 
-output logic [7:0] r_out, g_out, b_out,
+// output logic [7:0] r_out, g_out, b_out,
 
-output logic [9:0] x_out,
-output logic [8:0] y_out,
+// output logic [9:0] x_out,
+// output logic [8:0] y_out,
 
-output logic valid_int_out
+// output logic valid_int_out
 );
 
 localparam X_SIZE = 640;
@@ -210,7 +210,7 @@ wire ready;
 
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
-        if (ready & valid_int) begin
+        if (ready & tick_forward || first) begin
             if (lastx) begin
                 x <= 9'd0;
                 if (lasty) y <= 9'd0;
@@ -225,6 +225,14 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
+reg delayed_valid_int;
+
+always @(posedge out_stream_aclk) begin
+    delayed_valid_int <= valid_int;
+end
+
+wire tick_forward = delayed_valid_int & valid_int; 
+
 
 // Need to define all logic
 
@@ -234,13 +242,17 @@ wire [31:0] re_c, im_c;
 wire [7:0] final_depth;
 wire valid_int;
 
-// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
-
 // reg delayed_valid_int;
 
 // always @(posedge out_stream_aclk) begin
 //     delayed_valid_int <= valid_int;
 // end
+
+// reg edge_valid_int;
+
+// assign edge_valid_int = ~delayed_valid_int & valid_int;
+
+// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
 
 depth_calculator u_depth_calc (
   .sysclk       (out_stream_aclk), // system clock
@@ -285,15 +297,14 @@ assign g = final_depth * 10;
 assign b = final_depth * 10;
 
 
+// assign r_out = r;
+// assign g_out = g;
+// assign b_out = b;
 
-assign r_out = r;
-assign g_out = g;
-assign b_out = b;
+// assign x_out = x;
+// assign y_out = y;
 
-assign x_out = x;
-assign y_out = y;
-
-assign valid_int_out = valid_int;
+// assign valid_int_out = valid_int;
 
 // If you can't see something on the top level look to make sure all signals connected properly
 

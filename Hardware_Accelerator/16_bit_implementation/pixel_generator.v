@@ -56,7 +56,7 @@ input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
 input           s_axi_lite_wvalid,
 
-// Added below to make visible for testing
+// //Added below to make visible for testing
 
 output logic [7:0] r_out, g_out, b_out,
 
@@ -84,6 +84,18 @@ localparam AWAIT_READ = 2'b10;
 
 localparam AXI_OK = 2'b00;
 localparam AXI_ERR = 2'b10;
+
+
+// Added localparams to be interfaced with overlay
+
+localparam MAX_ITER = 8'd200;
+localparam WORD_LENGTH = 16;
+localparam FRAC = 8;
+localparam ZOOM = 1;
+//localparam REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
+//localparam IMAG_CENTER = (16'd1 <<< FRAC)/10;
+localparam REAL_CENTER = 0;
+localparam IMAG_CENTER = 0;
 
 reg [31:0]                          regfile [REG_FILE_SIZE-1:0];
 reg [REG_FILE_AWIDTH-1:0]           writeAddr, readAddr;
@@ -230,10 +242,12 @@ end
 
 // Idea for simulation: Make valid_int high after 100 clock cycles once final values been established
 
-wire [31:0] re_c, im_c;
+wire [15:0] re_c, im_c;
 wire [7:0] final_depth;
 wire valid_int;
 
+// reg max_iter [7:0] = 200;
+wire [23:0] color;
 // Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
 
 // reg delayed_valid_int;
@@ -251,17 +265,46 @@ depth_calculator u_depth_calc (
   .re_c         (re_c), // input real part of c (Q-format)
   .im_c         (im_c), // input imag part of c (Q-format)
   .final_depth  (final_depth), // final depth at done [9:0]
-  .done         (valid_int)  // done flag
+  .done         (valid_int),  // done flag
+  .max_iter     (MAX_ITER)
 );
 
-pixel_to_complex mapper (
-.clk        (out_stream_aclk),
-.x         (x),
-.y         (y),
-.real_part  (re_c),
-.im_part    (im_c)
+// pixel_to_complex mapper (
+// .clk        (out_stream_aclk),
+// .x         (x),
+// .y         (y),
+// .real_part  (re_c),
+// .im_part    (im_c)
+// );
+
+
+pixel_to_complex#(
+    .WORD_LENGTH(WORD_LENGTH),
+    .FRAC(FRAC)
+) mapper (
+    .SCREEN_WIDTH(X_SIZE),
+    .SCREEN_HEIGHT(Y_SIZE),
+    .ZOOM(ZOOM),
+    .real_center(REAL_CENTER),
+    .imag_center(IMAG_CENTER),
+    .clk(out_stream_aclk),
+    .x(x),
+    .y(y),
+    .real_part(re_c),
+    .im_part(im_c)
 );
 
+
+
+
+
+table_color lut_table (
+    .clk(out_stream_aclk),
+    .depth(final_depth),
+    .max_iterations(MAX_ITER),
+    .en(1'b1),
+    .color(color)
+);
 //wire valid_int = 1'b1;
 //wire start = 1'b1;
 
@@ -280,10 +323,9 @@ wire [7:0] r, g, b;
 //     delayed_valid_int <= valid_int;
 // end
 
-assign r = final_depth * 10;
-assign g = final_depth * 10;
-assign b = final_depth * 10;
-
+assign r = color[23:16];
+assign g = color[15:8];
+assign b = color[7:0];
 
 
 assign r_out = r;
@@ -295,44 +337,6 @@ assign y_out = y;
 
 assign valid_int_out = valid_int;
 
-// If you can't see something on the top level look to make sure all signals connected properly
-
-// // DEFAULT PIXEL_GEN START //
-
-// reg [9:0] x;
-// reg [8:0] y;
-
-// wire first = (x == 0) & (y==0);
-// wire lastx = (x == X_SIZE - 1);
-// wire lasty = (y == Y_SIZE - 1);
-// wire [7:0] frame = regfile[0];
-// wire ready;
-
-// always @(posedge out_stream_aclk) begin
-//     if (periph_resetn) begin
-//         if (ready & valid_int) begin
-//             if (lastx) begin
-//                 x <= 9'd0;
-//                 if (lasty) y <= 9'd0;
-//                 else y <= y + 9'd1;
-//             end
-//             else x <= x + 9'd1;
-//         end
-//     end
-//     else begin
-//         x <= 0;
-//         y <= 0;
-//     end
-// end
-
-// wire valid_int = 1'b1;
-
-// wire [7:0] r, g, b;
-// assign r = x[7:0] + frame;
-// assign g = y[7:0] + frame;
-// assign b = x[6:0]+y[6:0] + frame;
-
-
 // // DEFAULT PIXEL_Gen END //
 
 packer pixel_packer(    .aclk(out_stream_aclk),
@@ -342,6 +346,5 @@ packer pixel_packer(    .aclk(out_stream_aclk),
                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
-
  
 endmodule

@@ -56,7 +56,7 @@ input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
 input           s_axi_lite_wvalid,
 
-// Added below to make visible for testing
+// // Added below to make visible for testing
 
 output logic [7:0] r_out, g_out, b_out,
 
@@ -210,7 +210,7 @@ wire ready;
 
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
-        if (ready & valid_int) begin
+        if (ready & tick_forward || first) begin
             if (lastx) begin
                 x <= 9'd0;
                 if (lasty) y <= 9'd0;
@@ -225,6 +225,15 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
+reg delayed_valid_int;
+
+always @(posedge out_stream_aclk) begin
+    delayed_valid_int <= valid_int;
+end
+reg tick_forward;
+
+assign tick_forward = delayed_valid_int & valid_int; 
+
 
 // Need to define all logic
 
@@ -234,13 +243,17 @@ wire [31:0] re_c, im_c;
 wire [7:0] final_depth;
 wire valid_int;
 
-// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
-
 // reg delayed_valid_int;
 
 // always @(posedge out_stream_aclk) begin
 //     delayed_valid_int <= valid_int;
 // end
+
+// reg edge_valid_int;
+
+// assign edge_valid_int = ~delayed_valid_int & valid_int;
+
+// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
 
 depth_calculator u_depth_calc (
   .sysclk       (out_stream_aclk), // system clock
@@ -283,7 +296,6 @@ wire [7:0] r, g, b;
 assign r = final_depth * 10;
 assign g = final_depth * 10;
 assign b = final_depth * 10;
-
 
 
 assign r_out = r;

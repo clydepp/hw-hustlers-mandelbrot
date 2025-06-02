@@ -5,17 +5,18 @@
 
 
 module depth_calculator #(
-    parameter   FRAC = 16
+    parameter   FRAC = 8
 )(
     input logic              sysclk,
     input logic              start,         // Controls when we begin calculating
     input logic              reset,
     input logic [9:0]        x,
     input logic [8:0]        y,
+    input logic [7:0]        max_iter,
  
-    input logic [31:0]       re_c,
-    input logic [31:0]       im_c,
-    output logic [7:0]       final_depth,   // Make sure depth and final_depth are of same width
+    input logic [15:0]       re_c,
+    input logic [15:0]       im_c,
+    output logic [7:0]       final_depth,
     output logic             done           // might need to make it such that it can output x and y
 );
 
@@ -27,20 +28,20 @@ typedef enum logic [1:0] {
 
 my_states current_state, next_state;
 
-logic signed [31:0] re_z;
-logic signed [31:0] im_z;
+logic signed [15:0] re_z;
+logic signed [15:0] im_z;
 
-logic signed [63:0] re_z_2;
-logic signed [63:0] im_z_2;
-logic signed [63:0] cp;                             // cross product 2 * re_z * im_z
+logic signed [31:0] re_z_2;
+logic signed [31:0] im_z_2;
+logic signed [31:0] cp;                             // cross product 2 * re_z * im_z
 
-logic [9:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
+//logic [7:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
 
 logic [7:0] depth;
 
 //logic [2:0] count;      // Created in testing to see gap between signals to hopefully fix issues
 
-localparam logic [63:0] THRESHOLD = 64'd4 * (1<<FRAC) * (1<<FRAC);
+localparam logic [31:0] THRESHOLD = 32'd4 * (1<<FRAC) * (1<<FRAC);
 
 // next_state logic
 
@@ -66,26 +67,32 @@ always_ff @(posedge sysclk, posedge reset) begin
                 im_z <= 0;
                 depth <= 0;
                 done <= 0;              // important change take note
-                final_depth <= 0;
             end
         end
 
 
         // need to compute Z_re
         ITERATING: begin
-            re_z <= re_z_2[32+FRAC-1 -: 32]  // take the middle DW bits: Q-format crop
-                    - im_z_2[32+FRAC-1 -: 32]
+            re_z <= re_z_2[16+FRAC-1 -: 16]  // take the middle DW bits: Q-format crop
+                    - im_z_2[16+FRAC-1 -: 16]
                     + re_c;
-            im_z <= cp [32+FRAC-1 -: 32]
+            im_z <= cp [16+FRAC-1 -: 16]
                     + im_c;
         
-            final_depth <= final_depth + 1;
+            depth <= depth + 1;
+
+            // if((re_z_2 + im_z_2) > THRESHOLD || max_iter == depth) begin
+            //     final_depth <= depth - 1;
+            // end
+            // else final_depth <= 0;
+
             done <= 0;
         end
 
         FINISHED: begin
             done <= 1;
-            final_depth <= depth-1;
+            final_depth <= depth;
+            // final_depth <= depth-1;
         end
 
         default: begin

@@ -1,25 +1,3 @@
-
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 16.05.2024 22:03:08
-// Design Name: 
-// Module Name: test_block_v
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
 module pixel_generator(
 input           out_stream_aclk,
 input           s_axi_lite_aclk,
@@ -56,18 +34,23 @@ input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
 input           s_axi_lite_wvalid,
 
-// Added below to make visible for testing
+// output [7:0] r_out,
+// output [7:0] g_out,
+// output [7:0] b_out,
 
-output logic [7:0] r_out, g_out, b_out,
+// output [10:0] x_out,
+// output [10:0] y_out
 
-output logic [9:0] x_out,
-output logic [8:0] y_out,
-
-output logic valid_int_out
 );
-
+localparam [WORD_LENGTH-1:0] ZOOM = 1024; // 0.25 in fixed point, 65536 = 2^16
+localparam FRAC = 60;
+localparam WORD_LENGTH = 64;
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
+wire signed [WORD_LENGTH-1:0] real_center = -(3 * (64'd1 << (FRAC-2))); // -0.75 in fixed point
+// wire signed [WORD_LENGTH-1:0] real_center = $rtoi(-0.75 * (2.0 ** FRAC)); // -0.75 in fixed point
+wire signed  [WORD_LENGTH-1:0] imag_center =  (64'd1 <<< FRAC)/10; // 0 in fixed point
+//$display("Real center: %d, Imaginary center: %d", real_center, imag_center);
 parameter  REG_FILE_SIZE = 8;
 localparam REG_FILE_AWIDTH = $clog2(REG_FILE_SIZE);
 parameter  AXI_LITE_ADDR_WIDTH = 8;
@@ -197,26 +180,104 @@ assign s_axi_lite_wready = (writeState == AWAIT_WADD_AND_DATA || writeState == A
 assign s_axi_lite_bvalid = (writeState == AWAIT_RESP);
 assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
+//FSM to control signals
+typedef enum logic [1:0]{
+    IDLE = 2'b00,
+    START = 2'b01,
+    WAIT_DONE = 2'b10,
+    SEND_PIXEL = 2'b11
+} fsm_state_engine;
+fsm_state_engine state = IDLE;
+reg start_reg;
+wire start;
+wire valid_int;
+assign start = start_reg;
+reg valid_int_reg;
+assign valid_int = valid_int_reg;
 
+always_ff @(posedge out_stream_aclk or negedge periph_resetn) begin
+    if (!periph_resetn) begin
+        state <= IDLE;
+        start_reg <= 0;
+        valid_int_reg <= 0;
+    end else begin
+        case (state)
+            IDLE: begin
+                start_reg <= 1'b1;
+                valid_int_reg <= 1'b0;
+                state <= START;
+            end
+            START: begin
+                start_reg <= 1'b0;
+                state <= WAIT_DONE;
+            end
+            WAIT_DONE: begin
+                if (engine_done) begin
+                    valid_int_reg <= 1'b1;  // Data is valid now
+                    state <= SEND_PIXEL;
+                end
+            end
+            SEND_PIXEL: begin
+                if (ready) begin
+                    valid_int_reg <= 1'b0;
+                    state <= IDLE;  // move to next pixel on x/y counters outside this FSM
+                end
+            end
+        endcase
+    end
+end
 
-reg [9:0] x;  // Will want to take input for x and y to get screen dimensions
-reg [8:0] y;
+//end FSM
 
+reg [10:0] x;
+reg [10:0] y;
+reg [23:0] engine_color;
+reg engine_done;
+wire reset = ~periph_resetn;
+reg [WORD_LENGTH-1:0] re_c;
+reg [WORD_LENGTH-1:0] im_c;
 wire first = (x == 0) & (y==0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
-//wire [7:0] frame = regfile[0];
+wire [7:0] frame = regfile[0];
 wire ready;
+pixel_to_complex#(
+    .WORD_LENGTH(WORD_LENGTH),
+    .FRAC(FRAC)
+) complex_gen(
+    .SCREEN_WIDTH(X_SIZE),
+    .SCREEN_HEIGHT(Y_SIZE),
+    .ZOOM(ZOOM),
+    .real_center(real_center),
+    .imag_center(imag_center),
+    .clk(out_stream_aclk),
+    .x(x),
+    .y(y),
+    .real_part(re_c),
+    .im_part(im_c)
+);
+depth_calculator_LUT#(
+    .WORD_LENGTH(WORD_LENGTH),
+    .FRAC(FRAC)
+) depth_calc_color(
+    .sysclk(out_stream_aclk),
+    .start(start),
+    .reset(reset),
+    .re_c(re_c),
+    .im_c(im_c),
+    .color(engine_color),
+    .done(engine_done)
 
+    );
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
         if (ready & valid_int) begin
             if (lastx) begin
-                x <= 9'd0;
-                if (lasty) y <= 9'd0;
-                else y <= y + 9'd1;
+                x <= 11'd0;
+                if (lasty) y <= 11'd0;
+                else y <= y + 11'd1;
             end
-            else x <= x + 9'd1;
+            else x <= x + 11'd1;
         end
     end
     else begin
@@ -224,124 +285,74 @@ always @(posedge out_stream_aclk) begin
         y <= 0;
     end
 end
-
-
-// Need to define all logic
-
-// Idea for simulation: Make valid_int high after 100 clock cycles once final values been established
-
-wire [31:0] re_c, im_c;
-wire [7:0] final_depth;
-wire valid_int;
-
-// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
-
-// reg delayed_valid_int;
-
-// always @(posedge out_stream_aclk) begin
-//     delayed_valid_int <= valid_int;
-// end
-
-depth_calculator u_depth_calc (
-  .sysclk       (out_stream_aclk), // system clock
-  .start        (ready), // start pulse
-  .reset        (~periph_resetn), // synchronous reset
-  .x            (x), // pixel X coordinate [9:0]
-  .y            (y), // pixel Y coordinate [8:0]
-  .re_c         (re_c), // input real part of c (Q-format)
-  .im_c         (im_c), // input imag part of c (Q-format)
-  .final_depth  (final_depth), // final depth at done [9:0]
-  .done         (valid_int)  // done flag
-);
-
-pixel_to_complex mapper (
-.clk        (out_stream_aclk),
-.x         (x),
-.y         (y),
-.real_part  (re_c),
-.im_part    (im_c)
-);
-
-//wire valid_int = 1'b1;
-//wire start = 1'b1;
-
-//wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
-// valid_int high when you have finished generating a pixel
-
-
-
-
-wire [7:0] r, g, b;
-
-// always @(posedge out_stream_aclk) begin
-//     r <= final_depth * 3 / 2;
-//     g <= final_depth * 3 / 2;
-//     b <= final_depth * 3 / 2;
-//     delayed_valid_int <= valid_int;
-// end
-
-assign r = final_depth * 10;
-assign g = final_depth * 10;
-assign b = final_depth * 10;
-
-
-
-assign r_out = r;
-assign g_out = g;
-assign b_out = b;
-
-assign x_out = x;
-assign y_out = y;
-
-assign valid_int_out = valid_int;
-
-// If you can't see something on the top level look to make sure all signals connected properly
-
-// // DEFAULT PIXEL_GEN START //
-
-// reg [9:0] x;
-// reg [8:0] y;
-
-// wire first = (x == 0) & (y==0);
-// wire lastx = (x == X_SIZE - 1);
-// wire lasty = (y == Y_SIZE - 1);
-// wire [7:0] frame = regfile[0];
-// wire ready;
-
-// always @(posedge out_stream_aclk) begin
-//     if (periph_resetn) begin
-//         if (ready & valid_int) begin
-//             if (lastx) begin
-//                 x <= 9'd0;
-//                 if (lasty) y <= 9'd0;
-//                 else y <= y + 9'd1;
-//             end
-//             else x <= x + 9'd1;
-//         end
-//     end
-//     else begin
-//         x <= 0;
-//         y <= 0;
-//     end
-// end
-
-// wire valid_int = 1'b1;
+assign ready = out_stream_tready & out_stream_tvalid;
 
 // wire [7:0] r, g, b;
-// assign r = x[7:0] + frame;
-// assign g = y[7:0] + frame;
-// assign b = x[6:0]+y[6:0] + frame;
+// assign r = engine_color[23:16];
+// assign g = engine_color[15:8];
+// assign b = engine_color[7:0];
 
+reg [7:0] r_reg, g_reg, b_reg;
 
-// // DEFAULT PIXEL_Gen END //
+always @(posedge out_stream_aclk) begin
+    if (!periph_resetn) begin
+        r_reg <= 0;
+        g_reg <= 0;
+        b_reg <= 0;
+    end else if (valid_int) begin
+        r_reg <= engine_color[23:16];
+        g_reg <= engine_color[15:8];
+        b_reg <= engine_color[7:0];
+       
+    end
+end
+
+// assign r_out = r_reg;
+// assign g_out = g_reg;
+// assign b_out = b_reg;
+
+// assign x_out = x;
+// assign y_out = y;
+//assign g = y[7:0] + frame;
+//assign b = x[6:0]+y[6:0] + frame;
+// pixel_packer_simple pixel_packer(    .aclk(out_stream_aclk),
+//                         .aresetn(periph_resetn),
+//                         .r(r_reg), .g(g_reg), .b(b_reg),
+//                         .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
+//                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
+//                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
+//                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
 
 packer pixel_packer(    .aclk(out_stream_aclk),
                         .aresetn(periph_resetn),
-                        .r(r), .g(g), .b(b),
+                        .r(r_reg), .g(g_reg), .b(b_reg),
                         .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
+// new_rgb_stream_packer pixel_packer_new (
+//     .aclk(out_stream_aclk),
+//     .aresetn(periph_resetn),     // Ensure this is the correct reset for the packer
+
+//     // Pixel data input from pixel_generator
+//     .r_in(r_reg),
+//     .g_in(g_reg),
+//     .b_in(b_reg),
+//     .eol_in(lastx),             // Assuming lastx is your end-of-line signal
+//     .sof_in(first),             // Assuming first is your start-of-frame signal
+//     .valid_in(valid_int), // The valid signal for r_reg,g_reg,b_reg
+
+//     // Output to pixel_generator
+//     .in_stream_ready(ready), // Wire this to control your pixel_generator FSM
+
+//     // AXI4-Stream Video Output
+//     .out_stream_tdata(out_stream_tdata),
+//     .out_stream_tkeep(out_stream_tkeep),
+//     .out_stream_tlast(out_stream_tlast),
+//     .out_stream_tready(out_stream_tready), // From downstream HDMI IP
+//     .out_stream_tvalid(out_stream_tvalid),
+//     .out_stream_tuser(out_stream_tuser)
+// );
 
  
 endmodule

@@ -4,7 +4,7 @@ module top#(
     localparam RANDOM_READY = 2,        //Ready signal is true 50% of the time according to pseudo-random sequence
     localparam READY_AFTER_VALID = 3,   //Ready signal goes true after valid is true, then goes false
     
-    parameter READY_MODE = READY_AFTER_VALID, //Adjustable for different testing modes
+    parameter READY_MODE = RANDOM_READY, //Adjustable for different testing modes
 
 
     parameter TIMEOUT = 1000,           //Time to wait for valid to be true

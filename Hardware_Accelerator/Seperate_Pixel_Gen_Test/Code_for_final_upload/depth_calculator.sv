@@ -15,7 +15,7 @@ module depth_calculator #(
  
     input logic [31:0]       re_c,
     input logic [31:0]       im_c,
-    output logic [9:0]       final_depth,
+    output logic [7:0]       final_depth,
     output logic             done           // might need to make it such that it can output x and y
 );
 
@@ -38,6 +38,8 @@ logic [9:0] max_iter = 10;                          // need to get maximum depth
 
 logic [9:0] depth;
 
+//logic [2:0] count;      // Created in testing to see gap between signals to hopefully fix issues
+
 localparam logic [63:0] THRESHOLD = 64'd4 * (1<<FRAC) * (1<<FRAC);
 
 // next_state logic
@@ -46,7 +48,6 @@ always_ff @(posedge sysclk, posedge reset) begin
 
     if(reset) begin
         current_state <= IDLE;
-        next_state <= IDLE;
         re_z <= 0;
         im_z <= 0;
         depth <= 0;
@@ -57,7 +58,6 @@ always_ff @(posedge sysclk, posedge reset) begin
     else begin
 
     current_state <= next_state;
-    
     case(current_state)
 
         IDLE: begin
@@ -66,7 +66,6 @@ always_ff @(posedge sysclk, posedge reset) begin
                 im_z <= 0;
                 depth <= 0;
                 done <= 0;              // important change take note
-                final_depth <= 0;
             end
         end
 
@@ -80,6 +79,8 @@ always_ff @(posedge sysclk, posedge reset) begin
                     + im_c;
         
             depth <= depth + 1;
+            final_depth <= 0;
+            done <= 0;
         end
 
         FINISHED: begin
@@ -106,24 +107,30 @@ always_comb begin
     cp = (re_z * im_z) <<< 1;
 end
 
-logic escaped;
 
 always_comb begin
 
     // Computed combinationally to get current values
-
+    logic escaped;
     escaped = (re_z_2 + im_z_2) > THRESHOLD;
 
     next_state = current_state;
-
     
     case(current_state)
 
-    IDLE: if(start) next_state = ITERATING;
+    IDLE: begin
+        if(start) next_state = ITERATING;
+//        done = 1;
+    end
 
-    ITERATING: if(escaped || max_iter == depth) next_state = FINISHED;
-
-    FINISHED: next_state = IDLE;
+    ITERATING: begin
+        if(escaped || max_iter == depth) next_state = FINISHED;
+//        done = 0;
+    end
+    FINISHED: begin 
+        next_state = IDLE;
+//        done = 1;
+    end
 
     default: next_state = IDLE;
     endcase
