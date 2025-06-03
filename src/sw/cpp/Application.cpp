@@ -24,14 +24,6 @@ class Application {
     m_selectionRect.setOutlineColor(sf::Color::Red);
     m_selectionRect.setOutlineThickness(3);
 
-    // Load font and create buttons
-    // if (!m_font.loadFromFile("TimesNewRoman.ttf")) {
-    //  // std::cout << "Please, provide a Font!\n";
-    // }
-    // // createButton(width - 150, 5, m_changeColorButton, m_changeColorButtonText,
-    // //              "Change color");
-    // // createButton(width - 150, 50, m_resetZoomingButton,
-    // //              m_resetZoomingButtonText, "Reset Zooming");
   }
 
   void run() {
