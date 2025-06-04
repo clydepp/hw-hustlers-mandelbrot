@@ -1,12 +1,22 @@
-import { createSignal } from 'solid-js';
+import { createSignal, createEffect } from 'solid-js';
+import { createMousePosition } from '@solid-primitives/mouse';
+import { createScrollPosition } from '@solid-primitives/scroll';
+
 import Button from './components/Button';
 import CascadeButton from './components/CascadeButton';
 
 function App() {
   
+  const compScroll = createScrollPosition();
+  const pos = createMousePosition(window);
+  createEffect(() => {
+    console.log(pos.x, pos.y);
+    compScroll.y;
+  });
+  
   const [isCollapsed, setIsCollapsed] = createSignal(false);
   const [showNumbers, setShowNumbers] = createSignal(false);
-  const [counter, setCounter] = createSignal(1);
+  const [counter, setCounter] = createSignal(200);
 
   const toggleCollapse = () => {
     if (showNumbers()) {
@@ -61,6 +71,7 @@ function App() {
           "width": "100%",
           "height": "100%"
         }}>
+          {/* UI Controls - Top Left */}
           <div class="p-3" style={{ position: "absolute", "z-index": "10" }}>
             <div class="flex flex-col items-start gap-3">
               <Button onClick={toggleCollapse}>
@@ -102,6 +113,15 @@ function App() {
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* Mouse and Scroll Coordinates - Bottom Left */}
+          <div 
+            class="absolute bottom-3 left-3 text-white text-sm font-mono bg-black/50 px-2 py-1 rounded"
+            style={{ "z-index": "10" }}
+          >
+            X: {pos.x} Y: {pos.y}<br/>
+            Scroll: {compScroll.y}
           </div>
         </div>
       </div>
