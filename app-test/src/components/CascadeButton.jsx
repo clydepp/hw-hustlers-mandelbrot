@@ -1,14 +1,33 @@
+import { createSignal } from 'solid-js';
 import Button from './Button.jsx'
 
 export default function CascadeButton (props){
+  const [isHovered, setIsHovered] = createSignal(false);
+  
   const handleClick = () => {
     if (props.showNumbers && props.onMinusOne) {
       props.onMinusOne();
     }
   };
 
+  const handleMouseEnter = () => {
+    if (!props.showNumbers) {
+      setIsHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!props.showNumbers) {
+      setIsHovered(false);
+    }
+  };
+
   return (
-    <div class="grid grid-cols-5 gap-2">
+    <div 
+      class="flex flex-row gap-2"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <Button onClick={handleClick}>
         {props.showNumbers ? "-1" : (
           <svg width="20" height="20" data-slot="icon" aria-hidden="true" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -16,10 +35,21 @@ export default function CascadeButton (props){
           </svg>
         )}
       </Button>
-      <Button>GS</Button>
-      <Button>CL</Button>
-      <Button>FIRE</Button>
-      <Button>OCE</Button>
+      
+      <div 
+        class="flex flex-row gap-2 overflow-hidden transition-all duration-500 ease-in-out origin-left"
+        style={{
+          "opacity": (isHovered() && !props.showNumbers) ? "1" : "0",
+          "transform": (isHovered() && !props.showNumbers) ? "translateX(0)" : "translateX(-20px)",
+          "width": (isHovered() && !props.showNumbers) ? "auto" : "0",
+          "margin-left": (isHovered() && !props.showNumbers) ? "8px" : "0"
+        }}
+      >
+        <Button>GS</Button>
+        <Button>CL</Button>
+        <Button>FIRE</Button>
+        <Button>OCE</Button>
+      </div>
     </div>
   );
 }
