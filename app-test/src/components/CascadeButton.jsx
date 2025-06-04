@@ -24,7 +24,7 @@ export default function CascadeButton (props){
 
   return (
     <div 
-      class="flex flex-row gap-2"
+      class="flex flex-row gap-1"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
