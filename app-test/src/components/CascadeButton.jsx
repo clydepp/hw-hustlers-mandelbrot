@@ -45,10 +45,20 @@ export default function CascadeButton (props){
           "margin-left": (isHovered() && !props.showNumbers) ? "8px" : "0"
         }}
       >
-        <Button>GS</Button>
-        <Button>CL</Button>
-        <Button>FIRE</Button>
-        <Button>OCE</Button>
+        <Button 
+          customClass="bg-radial-[at_25%_25%] from-white to-zinc-900 to-66%"
+        >
+          GS
+        </Button>
+        <Button
+          customClass="bg-radial-[at_65%_25%] from-orange-300 via-blue-500 to-indigo-500 to-90%"
+        >
+          CL</Button>
+        <Button
+          customClass="bg-radial-[at_10%_85%] from-purple-800 via-orange-500 to-orange-300 to-90%"
+        >
+          SS</Button>
+        {/* <Button>OCE</Button> */}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from 'solid-js';
+import { createSignal, createEffect, onMount, onCleanup } from 'solid-js';
 import { createMousePosition } from '@solid-primitives/mouse';
 import { createScrollPosition } from '@solid-primitives/scroll';
 
@@ -9,9 +9,29 @@ function App() {
   
   const compScroll = createScrollPosition();
   const pos = createMousePosition(window);
+  const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
+  
   createEffect(() => {
     console.log(pos.x, pos.y);
-    compScroll.y;
+  });
+
+  onMount(() => {
+    const handleWheel = (event) => {
+      // Reverse scroll direction by negating deltaY
+      const newValue = mouseWheelDelta() + (-event.deltaY) * 0.2;
+      
+      // Cap between 0 and 2^32 (4,294,967,296)
+      const clampedValue = Math.max(0, Math.min(newValue, Math.pow(2, 32)));
+      
+      setMouseWheelDelta(clampedValue);
+      console.log('Mouse wheel:', -event.deltaY, 'Total:', clampedValue);
+    };
+
+    window.addEventListener('wheel', handleWheel);
+    
+    onCleanup(() => {
+      window.removeEventListener('wheel', handleWheel);
+    });
   });
   
   const [isCollapsed, setIsCollapsed] = createSignal(false);
@@ -115,13 +135,13 @@ function App() {
             </div>
           </div>
 
-          {/* Mouse and Scroll Coordinates - Bottom Left */}
+          {/* Mouse and Wheel Coordinates - Bottom Left */}
           <div 
             class="absolute bottom-3 left-3 text-white text-sm font-mono bg-black/50 px-2 py-1 rounded"
             style={{ "z-index": "10" }}
           >
-            X: {pos.x} Y: {pos.y}<br/>
-            Scroll: {compScroll.y}
+            Mouse X: {pos.x} Y: {pos.y}<br/>
+            Wheel: {mouseWheelDelta()}
           </div>
         </div>
       </div>
