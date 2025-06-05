@@ -45,7 +45,7 @@ export default function SideCascade (props) {
                     <path clip-rule="evenodd" d="M7.455 2.004a.75.75 0 0 1 .26.77 7 7 0 0 0 9.958 7.967.75.75 0 0 1 1.067.853A8.5 8.5 0 1 1 6.647 1.921a.75.75 0 0 1 .808.083Z" fill-rule="evenodd"></path>
                     </svg>
                 </Button>
-                <Button>
+                <Button onClick={() => props.setIsConfigModal(true)}>
                     <svg width="20" height="20" data-slot="icon" aria-hidden="true" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M4.745 3A23.933 23.933 0 0 0 3 12c0 3.183.62 6.22 1.745 9M19.5 3c.967 2.78 1.5 5.817 1.5 9s-.533 6.22-1.5 9M8.25 8.885l1.444-.89a.75.75 0 0 1 1.105.402l2.402 7.206a.75.75 0 0 0 1.104.401l1.445-.889m-8.25.75.213.09a1.687 1.687 0 0 0 2.062-.617l4.50-6.676a1.688 1.688 0 0 1 2.062-.618l.213.09" stroke-linecap="round" stroke-linejoin="round"></path>
                     </svg>

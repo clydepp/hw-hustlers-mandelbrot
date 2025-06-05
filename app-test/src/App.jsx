@@ -14,6 +14,7 @@ function App() {
   const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
   const [isDarkMode, setIsDarkMode] = createSignal(false);
   const [isModalOpen, setIsModalOpen] = createSignal(false);
+  const [isConfigModal, setIsConfigModal] = createSignal(false); 
   
   createEffect(() => {
     console.log(pos.x, pos.y);
@@ -148,6 +149,7 @@ function App() {
                     isDarkMode={isDarkMode()}
                     setIsDarkMode={setIsDarkMode}
                     setIsModalOpen={setIsModalOpen}
+                    setIsConfigModal={setIsConfigModal}
                   />
                 </div>
               </div>
@@ -166,8 +168,16 @@ function App() {
         </div>
       </div>
       <Modal 
+        title="Mandelbrot Viewer"
+        content="Hardware Hustlers, Mathematics Accelerator"
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
+      />
+      <Modal 
+        title="Configurations"
+        content="Set set values here"
+        isOpen={isConfigModal} 
+        onClose={() => setIsConfigModal(false)} 
       />
     </>
   );
