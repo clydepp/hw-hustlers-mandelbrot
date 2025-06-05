@@ -5,6 +5,7 @@ import { createScrollPosition } from '@solid-primitives/scroll';
 import Button from './components/Button';
 import CascadeButton from './components/CascadeButton';
 import SideCascade from './components/SideCascade';
+import Modal from './components/Modal';
 
 function App() {
   
@@ -12,6 +13,7 @@ function App() {
   const pos = createMousePosition(window);
   const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
   const [isDarkMode, setIsDarkMode] = createSignal(false);
+  const [isModalOpen, setIsModalOpen] = createSignal(false);
   
   createEffect(() => {
     console.log(pos.x, pos.y);
@@ -138,22 +140,23 @@ function App() {
                     </svg>
                   )}
                 </Button>
+                
                 <div class="w-fit">
                   <SideCascade
                     showNumbers={showNumbers()} 
                     onMinusOne={handlePlusTen}
                     isDarkMode={isDarkMode()}
                     setIsDarkMode={setIsDarkMode}
+                    setIsModalOpen={setIsModalOpen}
                   />
                 </div>
               </div>
             </div>
           </div>
-
           {/* Mouse and Wheel Coordinates - Bottom Left */}
           <div 
             class={`absolute bottom-3 left-3 text-sm font-mono px-2 py-1 rounded ${
-              isDarkMode() ? 'text-black bg-white/50' : 'text-white bg-black/50'
+              !isDarkMode() ? 'text-black bg-white/50' : 'text-white bg-black/50'
             }`}
             style={{ "z-index": "10" }}
           >
@@ -162,6 +165,10 @@ function App() {
           </div>
         </div>
       </div>
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </>
   );
 }
