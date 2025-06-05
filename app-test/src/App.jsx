@@ -17,6 +17,15 @@ function App() {
     console.log(pos.x, pos.y);
   });
 
+  // Add this effect to toggle the dark class
+  createEffect(() => {
+    if (isDarkMode()) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  });
+
   onMount(() => {
     const handleWheel = (event) => {
       // Reverse scroll direction by negating deltaY
