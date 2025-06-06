@@ -31,74 +31,162 @@ logic [9:0] engine_x [NUM_ENGINES-1:0]; // x assigned to each engine
 // logic [9:0] top_depth;
 logic [9:0] engine_depth [NUM_ENGINES-1:0]; // depth result for each engine
 
+typedef enum logic {E_IDLE, E_CALC} state_engine;
+state_engine state_e;
+//INIT: start of frame, reset all engines and set next_x and next_y
 //x coordinate assignment logic
+// always_ff @(posedge clk) begin
+
+//     if(reset) begin
+        
+//         busy <= 0;
+//         next_x <= 0;
+//         next_y <= 0;
+//         // engine_x <= 0;
+
+//     end else begin
+
+//         if(start && !busy) begin
+
+//             busy <= 1; // Set busy to true when start is received
+//             // next_x <= 0; // Reset next_x to 0 at the start of a new calculation
+//             // next_y <= 0; // Reset next_y to 0 at the start of a new calculation
+//             // engine_x <= 0; // Reset engine_x to 0 at the start of a new calculation
+//             engine_start <= '1; // Signal engines to start
+
+//             for (int i = 0; i<NUM_ENGINES; i++) begin
+//                 engine_x[i] <= i; // Assign initial x coordinates to each engine
+//             end
+
+//             next_x <= NUM_ENGINES; // Set next_x to the first available x coordinate after the engines
+
+//         end else begin
+
+//             if(next_x >= SCREEN_WIDTH-1) begin
+
+//                 // if engines all done reset
+//                 if(engine_done == '1) begin
+//                     busy <= 0; 
+//                     next_x <= 0; 
+//                     if(next_y >= SCREEN_HEIGHT-1) begin
+//                         next_y <= 0; // Reset y to 0 if we reach the end of the screen
+//                     end else begin
+//                         next_y <= next_y + 1; 
+//                     end
+
+//                     done <= 1; // Signal that the line is done
+
+//                 end
+//                 //if not all engines done, wait for them to finish
+//                 else begin
+//                     engine_start <= '0;
+//                 end
+            
+//             // if next x not greater than screen width, continue
+//             end else begin
+
+//                 int temp_x = next_x; // in case multiple engines are done in the same cycle
+
+//                 for(int i = 0; i < NUM_ENGINES; i++) begin
+//                     if(engine_done[i] && temp_x < SCREEN_WIDTH) begin
+//                         engine_x[i] <= temp_x; // Assign the x coordinate to the engine
+//                         temp_x = temp_x + 1; // Increment x for the next engine                
+//                     end
+//                 end
+
+//                 next_x <= temp_x; // Update the next x coordinate
+
+//             end
+            
+//         end
+//     end
+    
+// end
+
+//engine state logic 
 always_ff @(posedge clk) begin
 
     if(reset) begin
-        
         busy <= 0;
         next_x <= 0;
         next_y <= 0;
-        // engine_x <= 0;
-
-    end else begin
-
-        if(start && !busy) begin
-
-            busy <= 1; // Set busy to true when start is received
-            // next_x <= 0; // Reset next_x to 0 at the start of a new calculation
-            next_y <= 0; // Reset next_y to 0 at the start of a new calculation
-            // engine_x <= 0; // Reset engine_x to 0 at the start of a new calculation
-            engine_start <= '1; // Signal engines to start
-
-            for (int i = 0; i<NUM_ENGINES; i++) begin
-                engine_x[i] <= i; // Assign initial x coordinates to each engine
-            end
-
-            next_x <= NUM_ENGINES; // Set next_x to the first available x coordinate after the engines
-
-        end else begin
-
-            if(next_x >= SCREEN_WIDTH-1) begin
-
-                // if engines all done reset
-                if(engine_done == '1) begin
-                    busy <= 0; 
-                    next_x <= 0; 
-                    if(next_y >= SCREEN_HEIGHT-1) begin
-                        next_y <= 0; // Reset y to 0 if we reach the end of the screen
-                    end else begin
-                        next_y <= next_y + 1; 
-                    end
-
-                    done <= 1; // Signal that the line is done
-
-                end
-                //if not all engines done, wait for them to finish
-                else begin
-                    engine_start <= '0;
-                end
-            
-            // if next x not greater than screen width, continue
-            end else begin
-
-                int temp_x = next_x; // in case multiple engines are done in the same cycle
-
-                for(int i = 0; i < NUM_ENGINES; i++) begin
-                    if(engine_done[i] && temp_x < SCREEN_WIDTH) begin
-                        engine_x[i] <= temp_x; // Assign the x coordinate to the engine
-                        temp_x = temp_x + 1; // Increment x for the next engine                
-                    end
-                end
-
-                next_x <= temp_x; // Update the next x coordinate
-
-            end
-            
+        engine_start <= '0; // Reset engine start signals
+        //engine_done <= '0; 
+        for (int i =0; i < NUM_ENGINES; i++) begin
+            engine_x[i] <= 0; // Reset x coordinates for the next line
         end
-    end
+        done <= 0; // Reset done signal
+        state_e <= IDLE; // Reset state machine
+        
+    end else begin
+        case (state_e)
+            E_IDLE: begin
+                done <= 0; // Reset done signal
+
+                if(start && !busy) begin
+                    busy <= 1;
+                    next_x <= 0; 
+                    next_y <= 0; 
+                    engine_start <= '1;
+                    //engine_done <= '0;  
+                    // done <= 0; 
+                    for (int i = 0; i<NUM_ENGINES; i++) begin
+                        engine_x[i] <= i; // Assign initial x coordinates to each engine
+                    end
+                    next_x <= NUM_ENGINES; // Set next_x to the first available x coordinate after the engines
+                    state_e <= E_CALC;
+                end
+
+            end
+            E_CALC: begin
+
+                if(next_x >= SCREEN_WIDTH) begin
+
+                    // if engines all done reset
+                    if(engine_done == '1) begin
+                        busy <= 0; 
+                        next_x <= 0; 
+                        for (int i =0; i < NUM_ENGINES; i++) begin
+                            engine_x[i] <= 0; // Reset x coordinates for the next line
+                        end
+                        if(next_y >= SCREEN_HEIGHT) begin
+                            next_y <= 0; // Reset y to 0 if we reach the end of the screen
+                        end else begin
+                            next_y <= next_y + 1; 
+                        end
     
+                        done <= 1; // Signal that the line is done
+                        state_e <=  E_IDLE;
+                    end
+                    //if not all engines done, wait for them to finish
+                    else begin
+                        engine_start <= '0;
+                        done <= 0; 
+                        state_e <= E_CALC; 
+                    end
+                
+                // if next x not greater than screen width, continue
+                end else begin
+    
+                    int temp_x = next_x; // in case multiple engines are done in the same cycle
+    
+                    for(int i = 0; i < NUM_ENGINES; i++) begin
+                        if(engine_done[i] && temp_x < SCREEN_WIDTH) begin
+                            engine_x[i] <= temp_x; // Assign the x coordinate to the engine
+                            temp_x = temp_x + 1; // Increment x for the next engine                
+                        end
+                    end
+    
+                    next_x <= temp_x; // Update the next x coordinate
+                    state_e <= E_CALC; // Stay in CALC state
+                    done <= 0; 
+    
+                end
+            end
+        endcase
+    end
 end
+
 
 genvar i;
 
@@ -180,13 +268,13 @@ always_ff @(posedge clk) begin
     end
 end
 
-typedef enum {IDLE, INIT, CONT} state_t;
-state_t state;
+typedef enum logic [1:0] {IDLE, INIT, CONT} state_fifo;
+state_fifo state_f;
 // State machine to control BRAM write operations
 
 always_ff @(posedge clk) begin
     if (reset) begin
-        state <= IDLE;
+        state_f <= IDLE;
         fifo_ren <= 0;
         depth_out <= 0;
         addr_out <= 0;
@@ -194,11 +282,11 @@ always_ff @(posedge clk) begin
         // bram_en_a <= 0;
         // bram_we_a <= 4'b0000;
     end else begin
-        case (state)
+        case (state_f)
             IDLE: begin
                 if (!fifo_empty) begin
                     fifo_ren <= 1; // Request data
-                    state <= INIT;
+                    state_f <= INIT;
                 end else begin
                     fifo_ren <= 0;
                     depth_out <= 0;
@@ -224,12 +312,12 @@ always_ff @(posedge clk) begin
                 if(!fifo_empty) begin
 
                     fifo_ren <= 1; // Continue reading from FIFO
-                    state <= CONT; // Move to WRITE state after reading
+                    state_f <= CONT; // Move to WRITE state_f after reading
                     
                 end else begin
 
                     fifo_ren <= 0; // Stop reading if FIFO is empty
-                    state <= IDLE; // Go back to IDLE if FIFO is empty
+                    state_f <= IDLE; // Go back to IDLE if FIFO is empty
 
                 end
             end
@@ -249,15 +337,23 @@ always_ff @(posedge clk) begin
                 if(!fifo_empty) begin
 
                     fifo_ren <= 1;
-                    state <= CONT; // Continue writing if FIFO is not empty
+                    state_f <= CONT; // Continue writing if FIFO is not empty
 
                 end else begin
                     
                     fifo_ren <= 0; // Stop reading from FIFO
-                    state <= IDLE; // Go back to IDLE if FIFO is empty
+                    state_f <= IDLE; // Go back to IDLE if FIFO is empty
                 
                 end
             end
+            default:begin
+                state_f <= IDLE;
+                fifo_ren <= 0;
+                depth_out <= 0;
+                addr_out <= 0;
+                we_out <= 0;
+            end
+            
         endcase
     end
 end

@@ -263,6 +263,7 @@ engine_top parallel_engine (
 
 reg init_started = 0;
 
+//engine start logic 
 always @(posedge out_stream_aclk) begin
     if (!periph_resetn) begin
         start <= 0;
@@ -270,6 +271,8 @@ always @(posedge out_stream_aclk) begin
     end else if (!init_started) begin
         start <= 1;
         init_started <= 1;
+    end else if (lastx) begin
+        start <= 1;
     end else begin
         start <= 0;
     end
@@ -330,24 +333,29 @@ always @(posedge out_stream_aclk) begin
 
         case(lut_state)
             LUT_IDLE: begin
+                
+                lut_state <= LUT_IDLE; // Stay in idle state until start signal
+                lut_en <= 0; // Disable LUT lookup
+
                 if(done) begin
                     lut_state <= LUT_LOOKUP;
                     x <= 0;
-                    lut_en <= 0; 
+                    lut_en <= 1; 
+                    final_depth <= results[x]; //process x=0 correctly
                     //lut_depth <= results[0]; // Start with the first pixel
                 end
             end
             LUT_LOOKUP: begin
                 final_depth <= results[x];
                 lut_state <= LUT_DONE;
-                x <= x + 1;
+                x <= 0; // 1 cycle for lut_en, 1 cycle for result to be output
                 lut_en <= 1; // Enable the LUT lookup
             end
             LUT_DONE: begin
                 if(ready & valid_int) begin
                     if(lastx) begin
                         x <= 0;
-                        start <= 1; // Signal the engine to start processing the next line
+                        //start <= 1; // Signal the engine to start processing the next line
                         lut_en <= 0; // Disable LUT lookup 
                         if(lasty) begin
                             y <= 0;
