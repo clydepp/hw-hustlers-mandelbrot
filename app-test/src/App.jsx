@@ -6,8 +6,22 @@ import Button from './components/Button';
 import CascadeButton from './components/CascadeButton';
 import SideCascade from './components/SideCascade';
 import Modal from './components/Modal';
+import { useTranslation } from './i18n/useTranslation.js';
+
+// Q4.28 Fixed-Point Helper Functions
+const Q4_28_SCALE = 1 << 28; // 2^28 = 268,435,456
+
+const floatToQ4_28 = (value) => {
+  return Math.round(value * Q4_28_SCALE) | 0; // | 0 ensures 32-bit signed int
+};
+
+const q4_28ToFloat = (q_value) => {
+  return q_value / Q4_28_SCALE;
+};
 
 function App() {
+  const { t, setLanguage, currentLanguage } = useTranslation();
+  
   const compScroll = createScrollPosition();
   const pos = createMousePosition(window);
   const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
@@ -18,7 +32,15 @@ function App() {
   const [isConfigModal, setIsConfigModal] = createSignal(false);
   const [isTheoryModal, setIsTheoryModal] = createSignal(false);
   const [isEBIModal, setIsEBIModal] = createSignal(false);
-  const [isUsageBlur, setIsUsageBlur] = createSignal(false); // Add this
+  const [isUsageBlur, setIsUsageBlur] = createSignal(false);
+
+  const [zoom, setZoom] = createSignal(1);
+  const [centerX_Q4_28, setCenterX_Q4_28] = createSignal(floatToQ4_28(-0.5));
+  const [centerY_Q4_28, setCenterY_Q4_28] = createSignal(floatToQ4_28(0.0));
+
+  // Derived getters for display/calculation
+  const centerX = () => q4_28ToFloat(centerX_Q4_28());
+  const centerY = () => q4_28ToFloat(centerY_Q4_28());
 
   createEffect(() => {
     console.log(pos.x, pos.y);
@@ -84,6 +106,20 @@ function App() {
     setCounter(counter() - 10);
   };
 
+  // Updated input handlers
+  const handleCenterXInput = (e) => {
+    const floatValue = parseFloat(e.target.value) || 0;
+    // Clamp to Q4.28 range: -8.0 to 7.999999999
+    const clampedValue = Math.max(-8.0, Math.min(7.999999999, floatValue));
+    setCenterX_Q4_28(floatToQ4_28(clampedValue));
+  };
+  
+  const handleCenterYInput = (e) => {
+    const floatValue = parseFloat(e.target.value) || 0;
+    const clampedValue = Math.max(-8.0, Math.min(7.999999999, floatValue));
+    setCenterY_Q4_28(floatToQ4_28(clampedValue));
+  };
+
   return (
     <>
       {/* Blur Overlay - at App level */}
@@ -107,8 +143,23 @@ function App() {
           width: 640px;
           height: 480px;
         }
+        
+        /* Keep UI controls on the left even in RTL mode */
+        .ui-controls {
+          direction: ltr !important;
+          left: 0px !important;
+          right: auto !important;
+        }
+        
+        /* Keep coordinate display on the left in RTL */
+        .coordinates {
+          direction: ltr !important;
+          text-align: left !important;
+          left: 8px !important;
+          right: auto !important;
+        }
       `}</style>
-      
+
       <div class={`w-[640px] h-[480px] border overflow-hidden shadow-lg relative ${isDarkMode() ? 'bg-gray-900' : 'bg-white'}`}>
         <div style={{
           "background-image": "url('https://upload.wikimedia.org/wikipedia/commons/2/21/Mandel_zoom_00_mandelbrot_set.jpg')",
@@ -118,8 +169,16 @@ function App() {
           "width": "100%",
           "height": "100%"
         }}>
-          {/* UI Controls - Top Left */}
-          <div class="p-3" style={{ position: "absolute", "z-index": "10" }}>
+          {/* UI Controls - Force left positioning */}
+          <div 
+            class="p-3 ui-controls" 
+            style={{ 
+              position: "absolute", 
+              "z-index": "10",
+              left: "0",
+              right: "auto"
+            }}
+          >
             <div class="flex flex-col items-start gap-3 w-fit">
               <Button onClick={toggleCollapse} isDarkMode={isDarkMode()}>
                 {showNumbers() ? "-10" : (isCollapsed() ? "+" : "-")}
@@ -163,30 +222,36 @@ function App() {
                     setIsDarkMode={setIsDarkMode}
                     setIsModalOpen={setIsModalOpen}
                     setIsConfigModal={setIsConfigModal}
-                    // isUsageBlur={isUsageBlur}
-                    // setIsUsageBlur={setIsUsageBlur}
+                    isUsageBlur={isUsageBlur}
+                    setIsUsageBlur={setIsUsageBlur}
                   />
                 </div>
               </div>
             </div>
           </div>
-          {/* Mouse and Wheel Coordinates - Bottom Left */}
+          
+          {/* Coordinates - Force left positioning */}
           <div 
-            class={`absolute bottom-3 left-3 text-sm font-mono px-2 py-1 rounded ${
+            class={`absolute bottom-2 left-3 text-sm font-mono px-2 py-1 rounded coordinates ${
               !isDarkMode() ? 'text-black bg-white/50' : 'text-white bg-black/50'
             }`}
-            style={{ "z-index": "10" }}
+            style={{ 
+              "z-index": "10",
+              left: "15px",
+              right: "15px"
+            }}
           >
             X: {pos.x} Y: {pos.y}<br/>
-            Zoom: {mouseWheelDelta()}
+            {t('zoom')}: {mouseWheelDelta()}
           </div>
         </div>
       </div>
+      
       <Modal 
-        title="Mandelbrot Viewer"
+        title={t('title')}
         content={
           <div>
-            <h3 class="mb-4">Hardware Hustlers, Mathematics Accelerator</h3>
+            <h3 class="mb-4">{t('subtitle')}</h3>
             <div class="grid grid-cols-2 gap-3">
               <button
                 type="button" 
@@ -196,13 +261,13 @@ function App() {
                   setIsTheoryModal(true);
                 }}
               >
-                Theory
+                {t('theory')}
               </button>
               <button 
                 type="button" 
                 class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
               >
-                Usage
+                {t('usage')}
               </button>
               <button 
                 type="button" 
@@ -212,7 +277,7 @@ function App() {
                   setIsModalOpen(false);
                 }}
               >
-                Optimisations
+                {t('optimisations')}
               </button>
               <button 
                 type="button" 
@@ -222,7 +287,7 @@ function App() {
                   setIsEBIModal(true);
                 }}
               >
-                Accessibility
+                {t('accessibility')}
               </button>
             </div>
           </div>
@@ -231,38 +296,11 @@ function App() {
         onClose={() => setIsModalOpen(false)} 
       />
       <Modal 
-        title="Theory"
+        title={t('theory')}
         content={
           <div class="max-h-96 overflow-y-auto pr-2">
             <pre class="whitespace-pre-wrap text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-{`The Mandelbrot set is the set of complex numbers c for which the sequence defined by:
-
-    z₀ = 0
-    zₙ₊₁ = zₙ² + c
-
-remains bounded (does not escape to infinity) as n increases.
-
-To determine whether a point c is in the Mandelbrot set:
-1. Start with z = 0.
-2. Repeatedly apply the function z = z² + c.
-3. If |z| ever becomes greater than 2, the point c is NOT in the set.
-4. If |z| stays less than or equal to 2 after many iterations, c is LIKELY in the set.
-
-In practice:
-- Each pixel on the screen represents a complex number c.
-- We iterate z = z² + c for each pixel.
-- Points that escape are colored based on how quickly they escape.
-- Points that don't escape (stay bounded) are colored black.
-
-This creates the famous fractal: infinitely detailed, self-similar, and complex.
-
-Terms:
-- c: complex number (real + imaginary part)
-- |z|: magnitude of the complex number z
-- Escape radius: usually set to 2
-- Iteration count: how many times to repeat z = z² + c (e.g., 100–1000 times)
-
-The boundary of the Mandelbrot set marks the edge between stability and chaos.`}
+              {t('theoryContent')}
             </pre>
           </div>
         }
@@ -270,54 +308,81 @@ The boundary of the Mandelbrot set marks the edge between stability and chaos.`}
         onClose={() => setIsTheoryModal(false)} 
       />
       <Modal 
-        title="Manual Config"
-        contents={
+        title={t('manualConfig')}
+        content={
           <div>
-            <h3>hello</h3>
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Re(c):</label>
+                <input
+                  type="number"
+                  step="0.0000001"
+                  min="-8"
+                  max="7.999999999"
+                  value={centerX().toFixed(8)}
+                  onInput={handleCenterXInput}
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-green-500 focus:outline-none"
+                />
+                <div class="text-xs text-gray-400 mt-1">
+                  Q4.28: {centerX_Q4_28().toString(16)}h
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-1">Im(c):</label>
+                <input
+                  type="number"
+                  step="0.0000001"
+                  min="-8"
+                  max="7.999999999"
+                  value={centerY().toFixed(8)}
+                  onInput={handleCenterYInput}
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-green-500 focus:outline-none"
+                />
+                <div class="text-xs text-gray-400 mt-1">
+                  Q4.28: {centerY_Q4_28().toString(16)}h
+                </div>
+              </div>
+            </div>
           </div>
         }
         isOpen={isConfigModal}
         onClose={() => setIsConfigModal(false)}
       />
       <Modal 
-        title="Optimisations"
-        content="To speedup the Mandelbrot calculation: ..."
+        title={t('optimisations')}
+        content={t('optimisationsContent')}
         isOpen={isOptiModal}
         onClose={() => setIsOptiModal(false)}
       />
       <Modal 
-        title="Accessibility"
-        content="Put some languages and colourblind mode? here"
+        title={t('accessibility')}
+        content={
+          <div>
+            <div class="mb-6">
+              <h4 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Language Settings</h4>
+              <select 
+                value={currentLanguage()}
+                onChange={(e) => setLanguage(e.target.value)}
+                class="w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="en">🇺🇸 English</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="ar">🇸🇦 العربية</option>
+              </select>
+            </div>
+            
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <p class="text-sm text-gray-600 dark:text-gray-300">
+                {t('accessibilityContent')}
+              </p>
+            </div>
+          </div>
+        }
         isOpen={isEBIModal}
         onClose={() => setIsEBIModal(false)}
       />
-
-
-      
-      {/* <Modal 
-        title="Seahorse Valley"
-        content={`Coordinates: -0.75 + 0.1j
-          Zoom: 50x
-          `}
-      />
-      <Modal 
-        title="Spiral Arms"
-        content={`Coordinates: -0.16 + 1.04j
-          Zoom: 100x
-          `}
-      />
-      <Modal 
-        title="Minibrot"
-        content={`Coordinates: -1.25 + 0.02j
-          Zoom: 300x
-          `}
-      />
-      <Modal
-        title="Farey Addition"
-        content={`Coordinates: -1.25 + 0.02j
-          Zoom: 10x
-          `}
-      /> */}
     </>
   );
 }

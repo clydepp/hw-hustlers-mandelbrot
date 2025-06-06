@@ -11,20 +11,26 @@ export default function Modal (props) {
           // onClick={props.onClose} (commented out so modal is static)
         >
           <div 
-            class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-lg"
+            class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg"
+            style={{
+              "width": "500px",
+              "max-width": "60vw",
+              "max-height": "auto",
+              "overflow-y": "auto"
+            }}
           >
             <div class="flex justify-between items-center mb-4">
               <h1 class="text-xl font-bold text-gray-900 dark:text-white">{props.title}</h1>
               <button 
                 onClick={props.onClose}
-                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl"
+                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl flex-shrink-0 ml-4"
               >
                 ✕
               </button>
             </div>
-            <p class="text-gray-600 dark:text-gray-300">
+            <div class="text-gray-600 dark:text-gray-300">
               {props.content}
-            </p>
+            </div>
           </div>
         </div>
       </Portal>
