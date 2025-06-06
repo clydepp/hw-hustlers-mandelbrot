@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 
-#define ENDTIME 5000000
+#define ENDTIME 10000000
 
 int main(int argc, char **argv, char **env)
 {
@@ -57,6 +57,11 @@ int main(int argc, char **argv, char **env)
         {
             std::cout << "Simulation finished" << std::endl;
             break;
+        }
+
+        if (simcyc % 100000 == 0)
+        {
+            std::cout << "Cycle: " << simcyc << std::endl;
         }
     }
 

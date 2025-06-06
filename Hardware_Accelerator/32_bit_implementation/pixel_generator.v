@@ -1,25 +1,3 @@
-
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 16.05.2024 22:03:08
-// Design Name: 
-// Module Name: test_block_v
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
 module pixel_generator(
 input           out_stream_aclk,
 input           s_axi_lite_aclk,
@@ -88,14 +66,20 @@ localparam AXI_ERR = 2'b10;
 
 // Added localparams to be interfaced with overlay
 
-localparam MAX_ITER = 8'd1000;
+localparam MAX_ITER = 200;
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
-localparam ZOOM = 32;
+localparam ZOOM = 4;
 localparam REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
 localparam IMAG_CENTER = (16'd1 <<< FRAC)/10;
 // localparam REAL_CENTER = 0;
 // localparam IMAG_CENTER = 0;
+
+// wire [31:0] MAX_ITER = regfile[0];
+// wire [31:0] ZOOM = regfile[1];
+// wire [31:0] REAL_CENTER = regfile[2];
+// wire [31:0] IMAG_CENTER = regfile[3];
+
 
 reg [31:0]                          regfile [REG_FILE_SIZE-1:0];
 reg [REG_FILE_AWIDTH-1:0]           writeAddr, readAddr;
@@ -256,7 +240,7 @@ wire [23:0] color;
 //     delayed_valid_int <= valid_int;
 // end
 
-ali_depth_calculator#(
+depth_calculator#(
     .FRAC(FRAC), // Fractional bits for Q-format
     .WORD_LENGTH(WORD_LENGTH) // Word length for Q-format
 ) u_depth_calc (
@@ -270,25 +254,24 @@ ali_depth_calculator#(
   .max_iter     (MAX_ITER)
 );
 
-
-pixel_to_complex#(
+pixel_to_complex #(
     .WORD_LENGTH(WORD_LENGTH),
-    .FRAC(FRAC)
-) mapper (
+    .FRAC(FRAC),
     .SCREEN_WIDTH(X_SIZE),
-    .SCREEN_HEIGHT(Y_SIZE),
+    .SCREEN_HEIGHT(Y_SIZE)
+) mapper (
     .ZOOM(ZOOM),
     .real_center(REAL_CENTER),
-    .imag_center(IMAG_CENTER),
+    .imag_center(IMAG_CENTER),  
     .clk(out_stream_aclk),
+    .rst(~periph_resetn),
     .x(x),
     .y(y),
     .real_part(re_c),
-    .im_part(im_c)
+    .im_part(im_c),
+    .sof(first),
+    .eol(lasty)
 );
-
-
-
 
 
 table_color lut_table (
@@ -315,10 +298,11 @@ wire [7:0] r, g, b;
 //     b <= final_depth * 3 / 2;
 //     delayed_valid_int <= valid_int;
 // end
-
-assign b = color[23:16];
+assign r = color[23:16];
 assign g = color[15:8];
-assign r = color[7:0];
+assign b = color[7:0];
+
+
 
 
 assign r_out = r;

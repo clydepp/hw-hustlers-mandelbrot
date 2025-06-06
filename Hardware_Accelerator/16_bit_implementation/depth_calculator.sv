@@ -81,11 +81,6 @@ always_ff @(posedge sysclk, posedge reset) begin
         
             depth <= depth + 1;
 
-            // if((re_z_2 + im_z_2) > THRESHOLD || max_iter == depth) begin
-            //     final_depth <= depth - 1;
-            // end
-            // else final_depth <= 0;
-
             done <= 0;
         end
 
