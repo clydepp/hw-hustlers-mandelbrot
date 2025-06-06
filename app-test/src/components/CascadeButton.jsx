@@ -10,7 +10,6 @@ export default function CascadeButton (props){
     }
   };
 
-  
   const handleMouseLeave = () => {
     if (!props.showNumbers) {
       setIsHovered(false);
@@ -41,9 +40,9 @@ export default function CascadeButton (props){
         class="flex flex-row gap-2 overflow-hidden transition-all duration-500 ease-in-out origin-left"
         style={{
           "opacity": (isHovered() && !props.showNumbers) ? "1" : "0",
-          "transform": (isHovered() && !props.showNumbers) ? "translateX(0)" : "translateX(-20px)",
-          "width": (isHovered() && !props.showNumbers) ? "auto" : "0",
-          "margin-left": (isHovered() && !props.showNumbers) ? "8px" : "0"
+          "transform": (isHovered() && !props.showNumbers) ? "scaleX(1)" : "scaleX(0)",
+          "max-width": (isHovered() && !props.showNumbers) ? "200px" : "0px",
+          "margin-left": (isHovered() && !props.showNumbers) ? "8px" : "0px"
         }}
       >
         <Button 

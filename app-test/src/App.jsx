@@ -8,14 +8,18 @@ import SideCascade from './components/SideCascade';
 import Modal from './components/Modal';
 
 function App() {
-  
   const compScroll = createScrollPosition();
   const pos = createMousePosition(window);
   const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
   const [isDarkMode, setIsDarkMode] = createSignal(false);
   const [isModalOpen, setIsModalOpen] = createSignal(false);
-  const [isConfigModal, setIsConfigModal] = createSignal(false); 
-  
+
+  const [isOptiModal, setIsOptiModal] = createSignal(false);
+  const [isConfigModal, setIsConfigModal] = createSignal(false);
+  const [isTheoryModal, setIsTheoryModal] = createSignal(false);
+  const [isEBIModal, setIsEBIModal] = createSignal(false);
+  const [isUsageBlur, setIsUsageBlur] = createSignal(false); // Add this
+
   createEffect(() => {
     console.log(pos.x, pos.y);
   });
@@ -82,6 +86,15 @@ function App() {
 
   return (
     <>
+      {/* Blur Overlay - at App level */}
+      {isUsageBlur() && (
+        <div 
+          class="fixed inset-0 backdrop-blur-md bg-opacity-20 z-40"
+          onClick={() => setIsUsageBlur(false)}
+          style={{ "pointer-events": "all" }}
+        />
+      )}
+      
       <style jsx global>{`
         html, body {
           margin: 0;
@@ -150,6 +163,8 @@ function App() {
                     setIsDarkMode={setIsDarkMode}
                     setIsModalOpen={setIsModalOpen}
                     setIsConfigModal={setIsConfigModal}
+                    // isUsageBlur={isUsageBlur}
+                    // setIsUsageBlur={setIsUsageBlur}
                   />
                 </div>
               </div>
@@ -169,7 +184,49 @@ function App() {
       </div>
       <Modal 
         title="Mandelbrot Viewer"
-        content="Hardware Hustlers, Mathematics Accelerator"
+        content={
+          <div>
+            <h3 class="mb-4">Hardware Hustlers, Mathematics Accelerator</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button" 
+                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setIsTheoryModal(true);
+                }}
+              >
+                Theory
+              </button>
+              <button 
+                type="button" 
+                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+              >
+                Usage
+              </button>
+              <button 
+                type="button" 
+                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                onClick={() => {
+                  setIsOptiModal(true);
+                  setIsModalOpen(false);
+                }}
+              >
+                Optimisations
+              </button>
+              <button 
+                type="button" 
+                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setIsEBIModal(true);
+                }}
+              >
+                Accessibility
+              </button>
+            </div>
+          </div>
+        }
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
       />
@@ -209,9 +266,58 @@ The boundary of the Mandelbrot set marks the edge between stability and chaos.`}
             </pre>
           </div>
         }
-        isOpen={isConfigModal} 
-        onClose={() => setIsConfigModal(false)} 
-      />  
+        isOpen={isTheoryModal} 
+        onClose={() => setIsTheoryModal(false)} 
+      />
+      <Modal 
+        title="Manual Config"
+        contents={
+          <div>
+            <h3>hello</h3>
+          </div>
+        }
+        isOpen={isConfigModal}
+        onClose={() => setIsConfigModal(false)}
+      />
+      <Modal 
+        title="Optimisations"
+        content="To speedup the Mandelbrot calculation: ..."
+        isOpen={isOptiModal}
+        onClose={() => setIsOptiModal(false)}
+      />
+      <Modal 
+        title="Accessibility"
+        content="Put some languages and colourblind mode? here"
+        isOpen={isEBIModal}
+        onClose={() => setIsEBIModal(false)}
+      />
+
+
+      
+      {/* <Modal 
+        title="Seahorse Valley"
+        content={`Coordinates: -0.75 + 0.1j
+          Zoom: 50x
+          `}
+      />
+      <Modal 
+        title="Spiral Arms"
+        content={`Coordinates: -0.16 + 1.04j
+          Zoom: 100x
+          `}
+      />
+      <Modal 
+        title="Minibrot"
+        content={`Coordinates: -1.25 + 0.02j
+          Zoom: 300x
+          `}
+      />
+      <Modal
+        title="Farey Addition"
+        content={`Coordinates: -1.25 + 0.02j
+          Zoom: 10x
+          `}
+      /> */}
     </>
   );
 }

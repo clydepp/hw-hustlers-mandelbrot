@@ -16,9 +16,12 @@ export default function SideCascade (props) {
         if (props.setIsDarkMode) {
             const newValue = !props.isDarkMode;
             props.setIsDarkMode(newValue);
-            console.log('Setting isDarkMode to:', newValue);
-        } else {
-            console.log('Error: setIsDarkMode is not defined!');
+        }
+    };
+
+    const handleUsageClick = () => {
+        if (props.setIsUsageBlur) {
+            props.setIsUsageBlur(!props.isUsageBlur());
         }
     };
 
@@ -33,11 +36,12 @@ export default function SideCascade (props) {
             </Button>
 
             <div 
-                class="flex flex-col gap-2 overflow-hidden transition-all duration-500 ease-in-out origin-top"
+                class="flex flex-col gap-2 overflow-hidden transition-all duration-700 ease-in-out origin-top"
                 style={{
                   "opacity": isSide() ? "1" : "0",
                   "transform": isSide() ? "scaleY(1)" : "scaleY(0)",
-                  "width": isSide() ? "auto" : "0"
+                  "max-height": isSide() ? "200px" : "0px",
+                  "margin-top": isSide() ? "0" : "-8px"
                 }}
             >
                 <Button onClick={handleDarkModeToggle}>
