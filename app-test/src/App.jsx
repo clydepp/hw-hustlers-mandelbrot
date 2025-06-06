@@ -174,11 +174,44 @@ function App() {
         onClose={() => setIsModalOpen(false)} 
       />
       <Modal 
-        title="Configurations"
-        content="Set set values here"
+        title="Theory"
+        content={
+          <div class="max-h-96 overflow-y-auto pr-2">
+            <pre class="whitespace-pre-wrap text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+{`The Mandelbrot set is the set of complex numbers c for which the sequence defined by:
+
+    z₀ = 0
+    zₙ₊₁ = zₙ² + c
+
+remains bounded (does not escape to infinity) as n increases.
+
+To determine whether a point c is in the Mandelbrot set:
+1. Start with z = 0.
+2. Repeatedly apply the function z = z² + c.
+3. If |z| ever becomes greater than 2, the point c is NOT in the set.
+4. If |z| stays less than or equal to 2 after many iterations, c is LIKELY in the set.
+
+In practice:
+- Each pixel on the screen represents a complex number c.
+- We iterate z = z² + c for each pixel.
+- Points that escape are colored based on how quickly they escape.
+- Points that don't escape (stay bounded) are colored black.
+
+This creates the famous fractal: infinitely detailed, self-similar, and complex.
+
+Terms:
+- c: complex number (real + imaginary part)
+- |z|: magnitude of the complex number z
+- Escape radius: usually set to 2
+- Iteration count: how many times to repeat z = z² + c (e.g., 100–1000 times)
+
+The boundary of the Mandelbrot set marks the edge between stability and chaos.`}
+            </pre>
+          </div>
+        }
         isOpen={isConfigModal} 
         onClose={() => setIsConfigModal(false)} 
-      />
+      />  
     </>
   );
 }
