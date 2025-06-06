@@ -1,6 +1,4 @@
 #include "Vtop.h"
-#include "Vtop_top.h"
-#include "Vtop_pixel_generator.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h" // Include for VCD tracing
 #include <iostream>
@@ -8,21 +6,23 @@
 #include <cstdlib>
 #include <ctime>
 
-#define ENDTIME 70000000
+#define ENDTIME 10000000
 #define TIMEOUT 50
 
 int main(int argc, char **argv, char **env)
 {
     Verilated::commandArgs(argc, argv);
-    // Verilated::traceEverOn(true);  // Enable tracing
+    Verilated::traceEverOn(true); // Enable tracing
 
     Vtop *top = new Vtop;
-    // VerilatedVcdC *tfp = new VerilatedVcdC;
-    // top->trace(tfp, 99);            // Attach trace
-    // tfp->open("AXIS_tb.vcd");       // Open VCD file
+    VerilatedVcdC *tfp = new VerilatedVcdC;
+    top->trace(tfp, 99);      // Attach trace
+    tfp->open("AXIS_tb.vcd"); // Open VCD file
 
     top->clk = 0;
     top->rst = 0;
+
+    std::cout << "hello" << std::endl;
 
     std::ofstream csv("pixels.csv");
     csv << "x,y,r,g,b\n";
@@ -31,13 +31,20 @@ int main(int argc, char **argv, char **env)
     const int X_SIZE = 640;
     const int Y_SIZE = 480;
 
+    std::cout << "hello" << std::endl;
+
     // Clock for reset
     for (int i = 0; i < 2; i++)
     {
+        tfp->dump(2 * i);
         top->clk = !top->clk;
         top->eval();
-        // tfp->dump(i);  // Dump after reset
+        tfp->dump(2 * i + 1);
+        top->clk = !top->clk;
+        top->eval();
     }
+
+    std::cout << "hello" << std::endl;
 
     top->rst = 1;
 
@@ -46,9 +53,9 @@ int main(int argc, char **argv, char **env)
     {
         for (int tick = 0; tick < 2; ++tick)
         {
+            tfp->dump(2 * simcyc + tick);
             top->clk = !top->clk;
             top->eval();
-            //    tfp->dump(2 * simcyc + tick);  // Dump for each edge
         }
 
         if (top->valid && top->ready)
@@ -74,8 +81,8 @@ int main(int argc, char **argv, char **env)
     }
 
     csv.close();
-    // tfp->close();  // Close VCD
-    // delete tfp;
+    tfp->close(); // Close VCD
+    delete tfp;
     delete top;
     return 0;
 }

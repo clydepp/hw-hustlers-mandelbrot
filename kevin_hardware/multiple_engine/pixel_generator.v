@@ -292,10 +292,9 @@ localparam LUT_DONE = 2'b10;
 
 reg [1:0] lut_state = LUT_IDLE;
 
-wire [9:0] lut_depth;
 wire valid_int;
 reg [23:0] color;
-
+reg lut_en; 
 reg [9:0] final_depth; // Final depth to be used for color mapping
 
 //always @(posedge out_stream_aclk) begin
@@ -323,15 +322,18 @@ always @(posedge out_stream_aclk) begin
         x <= 0;
         y <= 0;
         start <= 0;
+        lut_en <= 0; 
     end
     else begin
-        start <= 0; 
+        //start <= 0; 
+        lut_en <= 0; 
 
         case(lut_state)
             LUT_IDLE: begin
                 if(done) begin
                     lut_state <= LUT_LOOKUP;
                     x <= 0;
+                    lut_en <= 0; 
                     //lut_depth <= results[0]; // Start with the first pixel
                 end
             end
@@ -339,12 +341,14 @@ always @(posedge out_stream_aclk) begin
                 final_depth <= results[x];
                 lut_state <= LUT_DONE;
                 x <= x + 1;
+                lut_en <= 1; // Enable the LUT lookup
             end
             LUT_DONE: begin
                 if(ready & valid_int) begin
                     if(lastx) begin
                         x <= 0;
                         start <= 1; // Signal the engine to start processing the next line
+                        lut_en <= 0; // Disable LUT lookup 
                         if(lasty) begin
                             y <= 0;
                         end
@@ -356,8 +360,12 @@ always @(posedge out_stream_aclk) begin
                     else begin
                         final_depth <= results[x];
                         x <= x + 1; // Move to the next pixel
+                        lut_en <= 1; // Enable the LUT lookup for the next pixel
                     end
                 end
+            end
+            default: begin
+                lut_state <= LUT_IDLE; // or safe reset state
             end
         endcase            
     end
@@ -367,8 +375,9 @@ table_color lut_table (
     .clk(out_stream_aclk),
     .depth(final_depth),
     .max_iterations(MAX_ITER),
-    .en(1'b1),
-    .color(color)
+    .en(lut_en),
+    .color(color),
+    .valid(valid_int)
 );
 
 //wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready

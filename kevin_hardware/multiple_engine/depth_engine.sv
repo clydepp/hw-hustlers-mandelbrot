@@ -45,7 +45,7 @@ localparam logic [31:0] THRESHOLD = 32'd4 * (1<<FRAC) * (1<<FRAC);
 
 // next_state logic
 
-always_ff @(posedge sysclk, posedge reset) begin
+always_ff @(posedge sysclk) begin
 
     if(reset) begin
         current_state <= IDLE;

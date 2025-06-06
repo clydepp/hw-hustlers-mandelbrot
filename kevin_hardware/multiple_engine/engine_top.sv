@@ -85,7 +85,7 @@ always_ff @(posedge clk) begin
                 int temp_x = next_x; // in case multiple engines are done in the same cycle
 
                 for(int i = 0; i < NUM_ENGINES; i++) begin
-                    if(engine_done[i]) begin
+                    if(engine_done[i] && temp_x < SCREEN_WIDTH) begin
                         engine_x[i] <= temp_x; // Assign the x coordinate to the engine
                         temp_x = temp_x + 1; // Increment x for the next engine                
                     end
@@ -174,7 +174,7 @@ always_ff @(posedge clk) begin
         for (int j = 0; j < NUM_ENGINES; j++) begin
             if (engine_done[j] && !fifo_full) begin        
                 fifo_wren[j] <= 1;
-                fifo_din[j] <= {engine_x[j], engine_depth[j]};
+                fifo_din[DATA_WIDTH*j +: DATA_WIDTH] <= {engine_x[j], engine_depth[j]};
             end
         end
     end

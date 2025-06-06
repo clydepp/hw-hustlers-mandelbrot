@@ -2,7 +2,8 @@ module table_color(
     input logic [9:0] depth, max_iterations,
     input logic clk,
     input logic en,
-    output logic [23:0] color
+    output logic [23:0] color,
+    output logic valid
 );
     logic escape;
     logic [23:0] color_lut [0:1023];
@@ -22,7 +23,9 @@ module table_color(
     initial $readmemh("color_lut.mem", color_lut);
 
     always_ff @(posedge clk) begin
+        valid <= 1'b0; // Default to not valid
         if (en) begin
+            valid <= 1'b1; 
             if (!escape)
                 color <= 24'h000000;
             else
