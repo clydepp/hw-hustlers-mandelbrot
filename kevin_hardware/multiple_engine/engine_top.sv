@@ -8,7 +8,7 @@ module engine_top #(
     input logic clk,
     input logic reset,
     input logic start, // signal to start the next pixel calculation
-    output logic done,
+    output logic module_done, //if fifo has finished writing all depth values
 
     output logic [9:0] depth_out,
     output logic we_out, //write enable for depth output
@@ -25,15 +25,17 @@ module engine_top #(
 logic busy; //signal for start of frame
 logic [NUM_ENGINES-1:0] engine_start; // Signal to start each engine
 logic [NUM_ENGINES-1:0] engine_done;
+logic [NUM_ENGINES-1:0] engine_eol; // if engine and line is done
 logic [9:0] next_x;
-logic [8:0] next_y;
+logic [8:0] y;
 logic [9:0] engine_x [NUM_ENGINES-1:0]; // x assigned to each engine
 // logic [9:0] top_depth;
 logic [9:0] engine_depth [NUM_ENGINES-1:0]; // depth result for each engine
 
-typedef enum logic {E_IDLE, E_CALC} state_engine;
+typedef enum logic [1:0] {E_IDLE, E_CALC, E_WAIT} state_engine;
 state_engine state_e;
-//INIT: start of frame, reset all engines and set next_x and next_y
+//E_WAIT when all engines are eol and waiting for fifo to finish writing
+
 //x coordinate assignment logic
 // always_ff @(posedge clk) begin
 
@@ -41,7 +43,7 @@ state_engine state_e;
         
 //         busy <= 0;
 //         next_x <= 0;
-//         next_y <= 0;
+//         y <= 0;
 //         // engine_x <= 0;
 
 //     end else begin
@@ -109,24 +111,24 @@ always_ff @(posedge clk) begin
     if(reset) begin
         busy <= 0;
         next_x <= 0;
-        next_y <= 0;
+        y <= 0;
         engine_start <= '0; // Reset engine start signals
         //engine_done <= '0; 
         for (int i =0; i < NUM_ENGINES; i++) begin
             engine_x[i] <= 0; // Reset x coordinates for the next line
         end
-        done <= 0; // Reset done signal
+        engine_eol <= '0; // Reset engine_eol signal
         state_e <= IDLE; // Reset state machine
         
     end else begin
         case (state_e)
             E_IDLE: begin
-                done <= 0; // Reset done signal
+                //done <= 0; // Reset done signal
 
                 if(start && !busy) begin
                     busy <= 1;
                     next_x <= 0; 
-                    next_y <= 0; 
+                    // next_y <= 0; 
                     engine_start <= '1;
                     //engine_done <= '0;  
                     // done <= 0; 
@@ -143,25 +145,32 @@ always_ff @(posedge clk) begin
                 if(next_x >= SCREEN_WIDTH) begin
 
                     // if engines all done reset
-                    if(engine_done == '1) begin
+                    if(engine_eol == '1) begin
                         busy <= 0; 
                         next_x <= 0; 
                         for (int i =0; i < NUM_ENGINES; i++) begin
                             engine_x[i] <= 0; // Reset x coordinates for the next line
                         end
-                        if(next_y >= SCREEN_HEIGHT) begin
-                            next_y <= 0; // Reset y to 0 if we reach the end of the screen
+                        if(y >= SCREEN_HEIGHT-1) begin
+                            y <= 0; // Reset y to 0 if we reach the end of the screen
                         end else begin
-                            next_y <= next_y + 1; 
+                            y <= y + 1; 
                         end
     
-                        done <= 1; // Signal that the line is done
-                        state_e <=  E_IDLE;
+                        //engine_eol <= '1; // Signal that the line is engine_eol
+                        state_e <=  E_WAIT;
                     end
-                    //if not all engines done, wait for them to finish
+                    //if not all engines engine_eol, wait for them to finish
                     else begin
                         engine_start <= '0;
-                        done <= 0; 
+                        for (int i =0; i < NUM_ENGINES; i++) begin
+                            if(engine_done[i]) begin
+                                engine_eol[i] <= 1; // Set engine_eol for engines that are done
+                            end else begin
+                                engine_eol[i] <= 0; // Reset engine_eol for engines that are not done
+                            end
+                        end
+
                         state_e <= E_CALC; 
                     end
                 
@@ -179,14 +188,21 @@ always_ff @(posedge clk) begin
     
                     next_x <= temp_x; // Update the next x coordinate
                     state_e <= E_CALC; // Stay in CALC state
-                    done <= 0; 
+                    engine_eol <= 0; 
     
+                end
+            end
+            E_WAIT: begin
+                engine_eol <= '1;
+                if(module_done) begin
+                    state_e <= E_IDLE; 
                 end
             end
         endcase
     end
 end
 
+assign module_done = fifo_empty && !busy && (engine_eol == '1); // Module is done when FIFO is empty, not busy, and line is engine_eol
 
 genvar i;
 
@@ -200,19 +216,25 @@ generate
             .start(engine_start[i]),   // Controls when we begin calculating
             .reset(reset),
             .x(engine_x[i]),        // x coordinate assigned to each engine
-            .y(next_y),             // y coordinate assigned to each engine
+            .y(y),             // y coordinate assigned to each engine
             .re_c(re_c),            // input real part of c (Q-format)
             .im_c(im_c),            // input imag part of c (Q-format)
             .max_iter(MAX_ITER),    // Maximum iterations for the mandelbrot calculation
+            .eol(module_done),     // End of line for top
             
             .final_depth(engine_depth[i]), // output depth for each engine
             .done(engine_done[i])  // might need to make it such that it can output x and y
         );
 
         pixel_to_complex mapper(
+            .SCREEN_WIDTH(SCREEN_WIDTH),
+            .SCREEN_HEIGHT(SCREEN_HEIGHT),
+            .ZOOM(1), // Zoom level, can be adjusted
+            .real_center(16'hff40),
+            .imag_center(16'h001A),
             .clk(clk),
             .x(engine_x[i]),        // x coordinate assigned to each engine
-            .y(next_y),             // y coordinate assigned to each engine
+            .y(y),             // y coordinate assigned to each engine
             .real_part(re_c),       // output real part of c (Q-format)
             .im_part(im_c)          // output imag part of c (Q-format)
         );
@@ -260,7 +282,7 @@ always_ff @(posedge clk) begin
 
         //multiple write 
         for (int j = 0; j < NUM_ENGINES; j++) begin
-            if (engine_done[j] && !fifo_full) begin        
+            if (engine_done[j] && busy && !fifo_full && !engine_eol[j]) begin        
                 fifo_wren[j] <= 1;
                 fifo_din[DATA_WIDTH*j +: DATA_WIDTH] <= {engine_x[j], engine_depth[j]};
             end
@@ -279,11 +301,14 @@ always_ff @(posedge clk) begin
         depth_out <= 0;
         addr_out <= 0;
         we_out <= 0;
+        engine_eol <= 0;
         // bram_en_a <= 0;
         // bram_we_a <= 4'b0000;
     end else begin
         case (state_f)
             IDLE: begin
+                engine_eol <= 0;
+
                 if (!fifo_empty) begin
                     fifo_ren <= 1; // Request data
                     state_f <= INIT;

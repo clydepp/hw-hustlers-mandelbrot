@@ -240,7 +240,7 @@ wire ready;
 
 reg start;
 wire done;
-reg [639:0][9:0] results; //640 pixels, 10 bit depth
+reg [9:0] results [639:0]; //640 pixels, 10 bit depth
 wire [9:0] results_din; 
 wire [$clog2(640)-1:0] results_addr; 
 wire results_we;
@@ -249,7 +249,7 @@ engine_top parallel_engine (
     .clk(out_stream_aclk),
     .reset(!periph_resetn),
     .start(start), ///--------------------------------------------------
-    .done(done),
+    .module_done(done),
     .depth_out(results_din),
     .we_out(results_we),
     .addr_out(results_addr)
@@ -281,7 +281,9 @@ end
 //write results each line
 always @(posedge out_stream_aclk) begin
     if (!periph_resetn) begin
-        results <= '0;
+        for(int i=0; i < 640; i = i + 1) begin
+            results[i] = 10'd0; // Initialize all results to zero
+        end
     end 
     else if (results_we) begin
         results[results_addr] <= results_din;
@@ -366,7 +368,7 @@ always @(posedge out_stream_aclk) begin
                         lut_state <= LUT_IDLE; // Go back to idle after processing a line
                     end
                     else begin
-                        final_depth <= results[x];
+                        final_depth <= results[x];  
                         x <= x + 1; // Move to the next pixel
                         lut_en <= 1; // Enable the LUT lookup for the next pixel
                     end
@@ -449,7 +451,7 @@ assign y_out = y;
 packer pixel_packer(    .aclk(out_stream_aclk),
                         .aresetn(periph_resetn),
                         .r(r), .g(g), .b(b),
-                        .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
+                        .eol(lastx), .in_stream_ready(ready), .valid_int(valid_int), .lut_en(lut_en), .sof(first),
                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
