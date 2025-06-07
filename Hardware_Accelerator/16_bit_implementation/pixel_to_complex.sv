@@ -38,6 +38,7 @@ module pixel_to_complex#(
        // real_part = real_min + x_scaled;
        // im_part   = imag_max - y_scaled;
     end
+
     always_ff @(posedge clk) begin
         // Update outputs on clock edge
         real_part <= real_min + x_scaled;
