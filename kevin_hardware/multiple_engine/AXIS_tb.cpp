@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 
-#define ENDTIME 5000000
+#define ENDTIME 35000000
 #define TIMEOUT 50
 
 int main(int argc, char **argv, char **env)

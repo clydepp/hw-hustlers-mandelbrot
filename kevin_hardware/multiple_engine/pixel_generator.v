@@ -94,7 +94,16 @@ localparam AWAIT_READ = 2'b10;
 localparam AXI_OK = 2'b00;
 localparam AXI_ERR = 2'b10;
 
-localparam MAX_ITER = 8'd200;
+// Added localparams to be interfaced with overlay
+
+localparam MAX_ITER = 200;
+localparam WORD_LENGTH = 32;
+localparam FRAC = 28;
+localparam ZOOM = 2;
+localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
+localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
+// localparam REAL_CENTER = 0;
+// localparam IMAG_CENTER = 0;
 
 // localparam NUM_ENGINES = 1; 
 
@@ -240,12 +249,16 @@ wire ready;
 
 reg start;
 wire done;
-reg [9:0] results [639:0]; //640 pixels, 10 bit depth
+reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
 wire [9:0] results_din; 
-wire [$clog2(640)-1:0] results_addr; 
+wire [$clog2(X_SIZE)-1:0] results_addr; 
 wire results_we;
 
-engine_top parallel_engine (
+engine_top#(
+    .FRAC(FRAC),
+    .WORD_LENGTH(WORD_LENGTH),
+    .ZOOM(ZOOM)
+) parallel_engine (
     .clk(out_stream_aclk),
     .reset(!periph_resetn),
     .start(start), ///--------------------------------------------------

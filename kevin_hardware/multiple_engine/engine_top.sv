@@ -1,9 +1,12 @@
 module engine_top #(
-    parameter int SCREEN_WIDTH  = 640,
-    parameter int SCREEN_HEIGHT = 480,
-    parameter int NUM_ENGINES = 5,
-    parameter int MAX_ITER = 200,
-    parameter int DATA_WIDTH = 20 // x (10 bits) + depth (10 bits)
+    parameter   SCREEN_WIDTH  = 640,
+    parameter   SCREEN_HEIGHT = 480,
+    parameter   NUM_ENGINES = 5,
+    parameter   MAX_ITER = 200,
+    parameter   DATA_WIDTH = 20, // x (10 bits) + depth (10 bits)
+    parameter   ZOOM = 1,
+    parameter   FRAC = 28, // Fractional bits for Q-format
+    parameter   WORD_LENGTH = 32 // Word length for Q-format
 )(
     input logic clk,
     input logic reset,
@@ -21,6 +24,9 @@ module engine_top #(
     // output          bram_rst_a,
     // output [3:0]    bram_we_a
 );
+
+localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
+localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
 
 logic busy; //signal for start of frame
 logic [NUM_ENGINES-1:0] engine_start; // Signal to start each engine
@@ -209,9 +215,12 @@ genvar i;
 generate
     for(i=0;i<NUM_ENGINES;i=i+1) begin
         
-        wire [15:0] re_c, im_c;
+        wire [WORD_LENGTH-1:0] re_c, im_c;
 
-        depth_engine engine(
+        depth_engine #(
+            .FRAC(FRAC), // Fractional bits for Q-format
+            .WORD_LENGTH(WORD_LENGTH) // Word length for Q-format
+        ) engine (
             .sysclk(clk),
             .start(engine_start[i]),   // Controls when we begin calculating
             .reset(reset),
@@ -226,12 +235,15 @@ generate
             .done(engine_done[i])  // might need to make it such that it can output x and y
         );
 
-        pixel_to_complex mapper(
+        pixel_to_complex #(
+            .WORD_LENGTH(WORD_LENGTH),
+            .FRAC(FRAC)
+        )  mapper (
             .SCREEN_WIDTH(SCREEN_WIDTH),
             .SCREEN_HEIGHT(SCREEN_HEIGHT),
-            .ZOOM(1), // Zoom level, can be adjusted
-            .real_center(16'hff40),
-            .imag_center(16'h001A),
+            .ZOOM(ZOOM), // Zoom level, can be adjusted
+            .real_center(REAL_CENTER),
+            .imag_center(IMAG_CENTER),
             .clk(clk),
             .x(engine_x[i]),        // x coordinate assigned to each engine
             .y(y),             // y coordinate assigned to each engine
