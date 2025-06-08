@@ -124,7 +124,7 @@ always_ff @(posedge clk) begin
             engine_x[i] <= 0; // Reset x coordinates for the next line
         end
         engine_eol <= '0; // Reset engine_eol signal
-        state_e <= IDLE; // Reset state machine
+        state_e <= E_IDLE; // Reset state machine
         
     end else begin
         case (state_e)

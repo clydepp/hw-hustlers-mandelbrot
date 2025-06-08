@@ -11,7 +11,7 @@ module pixel_fifo #(
     input logic [NUM_ENGINES-1:0] write_en,
     input logic read_en,
     output logic empty,
-    output [DATA_WIDTH-1:0] data_out
+    output logic [DATA_WIDTH-1:0] data_out
 );
 
     logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];  // Memory for the FIFO
