@@ -6,7 +6,8 @@ module engine_top #(
     parameter   DATA_WIDTH = 20, // x (10 bits) + depth (10 bits)
     parameter   ZOOM = 1,
     parameter   FRAC = 28, // Fractional bits for Q-format
-    parameter   WORD_LENGTH = 32 // Word length for Q-format
+    parameter   WORD_LENGTH = 32, // Word length for Q-format
+    parameter    FIFO_DEPTH = 16 // Depth of the FIFO
 )(
     input logic clk,
     input logic reset,
@@ -263,7 +264,7 @@ logic fifo_full, fifo_empty, fifo_ren;
 //read first fifo 
 pixel_fifo #(
     .DATA_WIDTH(20), // x (10 bits) + depth (10 bits)
-    .DEPTH(32),
+    .DEPTH(FIFO_DEPTH),
     .NUM_ENGINES(NUM_ENGINES)
 ) output_fifo (
     .clk(clk),
