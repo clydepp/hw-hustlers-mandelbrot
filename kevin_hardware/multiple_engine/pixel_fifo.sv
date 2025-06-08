@@ -1,6 +1,6 @@
 module pixel_fifo #(
     parameter int DATA_WIDTH = 20, // x, depth
-    parameter int DEPTH = 32,
+    parameter int DEPTH = 64,
     parameter NUM_ENGINES = 5
 )(
     input logic clk,

@@ -5,46 +5,64 @@
 
 
 module depth_engine #(
-    parameter   FRAC = 8
+    parameter   FRAC = 8,
+    parameter   WORD_LENGTH = 16 // Total bits for fixed-point representation
 )(
     input logic              sysclk,
     input logic              start,         // Controls when we begin calculating
     input logic              reset,
     input logic [9:0]        x,
     input logic [8:0]        y,
-    input logic [7:0]        max_iter,
+    input logic [9:0]        max_iter,
+    input logic              eol,
  
-    input logic [15:0]       re_c,
-    input logic [15:0]       im_c,
-    output logic [7:0]       final_depth,
+    input logic [WORD_LENGTH-1:0]       re_c,
+    input logic [WORD_LENGTH-1:0]       im_c,
+    output logic [9:0]       final_depth,
     output logic             done           // might need to make it such that it can output x and y
 );
 
-typedef enum logic [1:0] {
-  IDLE      = 2'd0,
-  ITERATING = 2'd1,
-  FINISHED  = 2'd2
+typedef enum {
+  IDLE,
+  ITER_1,
+  ITER_2,
+  ITER_3,
+  FINISHED
 } my_states;
 
 my_states current_state, next_state;
 
-logic signed [15:0] re_z;
-logic signed [15:0] im_z;
+logic signed [WORD_LENGTH-1:0] re_z;
+logic signed [WORD_LENGTH-1:0] im_z;
 
-logic signed [31:0] re_z_2;
-logic signed [31:0] im_z_2;
-logic signed [31:0] cp;                             // cross product 2 * re_z * im_z
+logic signed [2*WORD_LENGTH-1:0] re_z_2;
+logic signed [2*WORD_LENGTH-1:0] im_z_2;
+logic signed [2*WORD_LENGTH-1:0] cross_product;                             // cross product 2 * re_z * im_z
 
 //logic [7:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
 
-logic [7:0] depth;
+logic [9:0] depth;
 
 //logic [2:0] count;      // Created in testing to see gap between signals to hopefully fix issues
 
-localparam logic [31:0] THRESHOLD = 32'd4 * (1<<FRAC) * (1<<FRAC);
-
+localparam logic [2*WORD_LENGTH-1:0] THRESHOLD = 32'd4 * (1<<FRAC) * (1<<FRAC);
+localparam int HALF_WIDTH = WORD_LENGTH / 2;
+localparam int lim1 = (WORD_LENGTH >> 1) - 1; // limit for low part of the word
+localparam int lim2 = WORD_LENGTH - 1; // limit for high part of the word
+logic signed [2*WORD_LENGTH-1:0] pr0, pr1, pr2;  // re low×low, hi×low, hi×hi
+logic signed [2*WORD_LENGTH-1:0] pi0, pi1, pi2;  // im low×low, hi×low, hi×hi
+logic signed [2*WORD_LENGTH-1:0] pc0, pc1, pc2, pc3; // re_lo×im_lo, re_hi×im_lo, re_lo×im_hi, re_hi×im_hi
 // next_state logic
+logic signed [HALF_WIDTH-1:0] re_z_lo, re_z_hi;
+logic signed [HALF_WIDTH-1:0] im_z_lo, im_z_hi;
 
+// Always split the current z values
+always_comb begin
+    re_z_lo = re_z[HALF_WIDTH-1:0];
+    re_z_hi = re_z[WORD_LENGTH-1:HALF_WIDTH];
+    im_z_lo = im_z[HALF_WIDTH-1:0];
+    im_z_hi = im_z[WORD_LENGTH-1:HALF_WIDTH];
+end
 always_ff @(posedge sysclk) begin
 
     if(reset) begin
@@ -62,6 +80,9 @@ always_ff @(posedge sysclk) begin
     case(current_state)
 
         IDLE: begin
+            if(eol) begin
+                done <= 0;
+            end
             if(start) begin
                 re_z <= 0;
                 im_z <= 0;
@@ -70,22 +91,53 @@ always_ff @(posedge sysclk) begin
             end
         end
 
+        ITER_1: begin
 
+
+            pr0 <= re_z_lo * re_z_lo;           // re_lo²
+                pr1 <= re_z_hi * re_z_lo;           // re_hi×re_lo (will be doubled and shifted)
+                pr2 <= re_z_hi * re_z_hi;           // re_hi²
+
+                // Imaginary part: (im_hi * 2^n + im_lo)^2
+                pi0 <= im_z_lo * im_z_lo;           // im_lo²
+                pi1 <= im_z_hi * im_z_lo;           // im_hi×im_lo (will be doubled and shifted)
+                pi2 <= im_z_hi * im_z_hi;           // im_hi²
+
+                // Cross product: 2 * re_z * im_z = 2 * (re_hi*2^n + re_lo) * (im_hi*2^n + im_lo)
+                pc0 <= re_z_lo * im_z_lo;           // re_lo×im_lo
+                pc1 <= re_z_hi * im_z_lo;           // re_hi×im_lo
+                pc2 <= re_z_lo * im_z_hi;           // re_lo×im_hi
+                pc3 <= re_z_hi * im_z_hi;           // re_hi×im_hi
+            // re_z_2 <= re_z * re_z;
+            // im_z_2 <= im_z * im_z;
+            // cross_product <= (re_z * im_z) <<< 1;
+        end
+        ITER_2: begin
+            //lim1 <= lim1 + 1;
+        //    re_z_2 <= (pr2 << WORD_LENGTH) + (pr1 << (WORD_LENGTH/2)) + pr0;
+        //     im_z_2 <= (pi2 << WORD_LENGTH) + (pi1 << (WORD_LENGTH/2)) + pi0;
+        //     cross_product <= ((pc3 << WORD_LENGTH) + (pc2 << (WORD_LENGTH/2)) + (pc1 << (WORD_LENGTH/2)) + pc0) << 1;
+         re_z_2 <= ({{(WORD_LENGTH-2*HALF_WIDTH){pr2[2*HALF_WIDTH-1]}}, pr2} << WORD_LENGTH) + 
+                         ({{(HALF_WIDTH){pr1[2*HALF_WIDTH-1]}}, pr1} << (HALF_WIDTH + 1)) + 
+                         {{(WORD_LENGTH-2*HALF_WIDTH){pr0[2*HALF_WIDTH-1]}}, pr0};
+                
+                // For im_z²: pi2*2^(2n) + 2*pi1*2^n + pi0  
+                im_z_2 <= ({{(WORD_LENGTH-2*HALF_WIDTH){pi2[2*HALF_WIDTH-1]}}, pi2} << WORD_LENGTH) + 
+                         ({{(HALF_WIDTH){pi1[2*HALF_WIDTH-1]}}, pi1} << (HALF_WIDTH + 1)) + 
+                         {{(WORD_LENGTH-2*HALF_WIDTH){pi0[2*HALF_WIDTH-1]}}, pi0};
+                
+                // For cross product: 2 * (pc3*2^(2n) + pc2*2^n + pc1*2^n + pc0)
+                cross_product <= ((({{(WORD_LENGTH-2*HALF_WIDTH){pc3[2*HALF_WIDTH-1]}}, pc3} << WORD_LENGTH) + 
+                                  ({{(HALF_WIDTH){pc2[2*HALF_WIDTH-1]}}, pc2} << HALF_WIDTH) + 
+                                  ({{(HALF_WIDTH){pc1[2*HALF_WIDTH-1]}}, pc1} << HALF_WIDTH) + 
+                                  {{(WORD_LENGTH-2*HALF_WIDTH){pc0[2*HALF_WIDTH-1]}}, pc0}) << 1);
+        end
         // need to compute Z_re
-        ITERATING: begin
-            re_z <= re_z_2[16+FRAC-1 -: 16]  // take the middle DW bits: Q-format crop
-                    - im_z_2[16+FRAC-1 -: 16]
-                    + re_c;
-            im_z <= cp [16+FRAC-1 -: 16]
-                    + im_c;
-        
-            depth <= depth + 1;
-
-            // if((re_z_2 + im_z_2) > THRESHOLD || max_iter == depth) begin
-            //     final_depth <= depth - 1;
-            // end
-            // else final_depth <= 0;
-
+        ITER_3: begin
+         
+            re_z  <= (re_z_2   >>> FRAC) - (im_z_2  >>> FRAC) + re_c;
+                    im_z  <= (cross_product >>> FRAC)   + im_c;
+                    depth <= depth + 1;
             done <= 0;
         end
 
@@ -108,11 +160,11 @@ end
 
 
 /// making sure we calculate with the correct current values
-always_comb begin
-    re_z_2 = re_z * re_z;
-    im_z_2 = im_z * im_z;
-    cp = (re_z * im_z) <<< 1;
-end
+// always_comb begin
+//     re_z_2 = re_z * re_z;
+//     im_z_2 = im_z * im_z;
+//     cross_product = (re_z * im_z) <<< 1;
+// end
 
 
 always_comb begin
@@ -126,12 +178,18 @@ always_comb begin
     case(current_state)
 
     IDLE: begin
-        if(start) next_state = ITERATING;
+        if(start) next_state = ITER_1;
 //        done = 1;
     end
-
-    ITERATING: begin
+    ITER_1: begin
+        next_state = ITER_2;
+    end
+    ITER_2: begin
+        next_state = ITER_3;
+     end
+    ITER_3: begin
         if(escaped || max_iter == depth) next_state = FINISHED;
+        else next_state = ITER_1;
 //        done = 0;
     end
     FINISHED: begin 

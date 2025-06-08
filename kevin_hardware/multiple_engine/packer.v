@@ -6,8 +6,9 @@ input           aresetn,
 input [7:0]     r,g,b,
 input           eol,
 output          in_stream_ready,
-input           valid,
+input           valid_int,
 input           sof, 
+input           lut_en,
 
 output [31:0]   out_stream_tdata,
 output [3:0]    out_stream_tkeep,
@@ -31,6 +32,7 @@ reg [31:0]      tdata;
 reg             tvalid;
 reg             ready;
 
+wire           valid = valid_int & lut_en; //Only pack if valid and enabled
 
 always @(posedge aclk)begin
     if(aresetn) begin
