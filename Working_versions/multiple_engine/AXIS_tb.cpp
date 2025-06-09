@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 
-#define ENDTIME 35000000
+#define ENDTIME 30000000
 #define TIMEOUT 50
 
 int main(int argc, char **argv, char **env)
@@ -15,9 +15,9 @@ int main(int argc, char **argv, char **env)
     Verilated::traceEverOn(true); // Enable tracing
 
     Vtop *top = new Vtop;
-    VerilatedVcdC *tfp = new VerilatedVcdC;
-    top->trace(tfp, 99);      // Attach trace
-    tfp->open("AXIS_tb.vcd"); // Open VCD file
+    // VerilatedVcdC *tfp = new VerilatedVcdC;
+    // top->trace(tfp, 99);      // Attach trace
+    // tfp->open("AXIS_tb.vcd"); // Open VCD file
 
     top->clk = 0;
     top->rst = 0;
@@ -36,10 +36,10 @@ int main(int argc, char **argv, char **env)
     // Clock for reset
     for (int i = 0; i < 2; i++)
     {
-        tfp->dump(2 * i);
+        // tfp->dump(2 * i);
         top->clk = !top->clk;
         top->eval();
-        tfp->dump(2 * i + 1);
+        // tfp->dump(2 * i + 1);
         top->clk = !top->clk;
         top->eval();
     }
@@ -53,7 +53,7 @@ int main(int argc, char **argv, char **env)
     {
         for (int tick = 0; tick < 2; ++tick)
         {
-            tfp->dump(2 * simcyc + tick);
+            // tfp->dump(2 * simcyc + tick);
             top->clk = !top->clk;
             top->eval();
         }
@@ -81,8 +81,8 @@ int main(int argc, char **argv, char **env)
     }
 
     csv.close();
-    tfp->close(); // Close VCD
-    delete tfp;
+    // tfp->close(); // Close VCD
+    // delete tfp;
     delete top;
     return 0;
 }

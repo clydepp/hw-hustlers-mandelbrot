@@ -5,6 +5,9 @@ module engine_top #(
     parameter   MAX_ITER = 200,
     parameter   DATA_WIDTH = 20, // x (10 bits) + depth (10 bits)
     parameter   ZOOM = 1,
+    parameter   ZOOM_RECIPROCAL = 32'h00000001, // 1/ZOOM in Qm.n format
+    parameter   REAL_CENTER = 32'hC0000000, // in Q4.28 format
+    parameter   IMAG_CENTER = 32'h00000000, // in Q4.28 format
     parameter   FRAC = 28, // Fractional bits for Q-format
     parameter   WORD_LENGTH = 32, // Word length for Q-format
     parameter    FIFO_DEPTH = 16 // Depth of the FIFO
@@ -26,8 +29,8 @@ module engine_top #(
     // output [3:0]    bram_we_a
 );
 
-localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
-localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
+// localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
+// localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
 
 logic busy; //signal for start of frame
 logic [NUM_ENGINES-1:0] engine_start; // Signal to start each engine
@@ -148,6 +151,9 @@ always_ff @(posedge clk) begin
 
             end
             E_CALC: begin
+                // if (fifo_full) begin
+                //     // Stall: do not assign new x or start engines
+                //     engine_start <= '0;
 
                 if(next_x >= SCREEN_WIDTH) begin
 
@@ -211,6 +217,9 @@ end
 
 assign module_done = fifo_empty && !busy && (engine_eol == '1); // Module is done when FIFO is empty, not busy, and line is engine_eol
 
+logic pixel_complex_eol;
+assign pixel_complex_eol = (engine_eol == '1);
+
 genvar i;
 
 generate
@@ -240,9 +249,8 @@ generate
             .WORD_LENGTH(WORD_LENGTH),
             .FRAC(FRAC)
         )  mapper (
-            .SCREEN_WIDTH(SCREEN_WIDTH),
-            .SCREEN_HEIGHT(SCREEN_HEIGHT),
-            .ZOOM(ZOOM), // Zoom level, can be adjusted
+            .ZOOM(ZOOM),
+            .ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
             .real_center(REAL_CENTER),
             .imag_center(IMAG_CENTER),
             .clk(clk),

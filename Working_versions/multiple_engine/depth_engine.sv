@@ -5,8 +5,8 @@
 
 
 module depth_engine #(
-    parameter   FRAC = 8,
-    parameter   WORD_LENGTH = 16 // Total bits for fixed-point representation
+    parameter   FRAC = 28,
+    parameter   WORD_LENGTH = 32 // Total bits for fixed-point representation
 )(
     input logic              sysclk,
     input logic              start,         // Controls when we begin calculating
