@@ -61,7 +61,7 @@ input           s_axi_lite_wvalid,
 output logic [7:0] r_out, g_out, b_out,
 
 output logic [9:0] x_out,
-output logic [8:0] y_out
+output logic [8:0] y_out,
 
 // output logic valid_int_out
 
@@ -100,10 +100,12 @@ localparam MAX_ITER = 200;
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
 localparam ZOOM = 2;
-localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
+localparam ZOOM_RECIPROCAL = 32'd1<<(FRAC - 1); // Reciprocal of zoom in Q-format
+localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
 localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
-// localparam REAL_CENTER = 0;
-// localparam IMAG_CENTER = 0;
+localparam [15:0] MAX_ITER_RECIPROCAL = (MAX_ITER != 0)
+      ? ( (32'd1 << 16) / MAX_ITER )
+      : {16{1'b0}};  
 
 // localparam NUM_ENGINES = 1; 
 
@@ -240,7 +242,10 @@ wire results_we;
 engine_top#(
     .FRAC(FRAC),
     .WORD_LENGTH(WORD_LENGTH),
-    .ZOOM(ZOOM)
+    .ZOOM(ZOOM),
+    .ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
+    .REAL_CENTER(REAL_CENTER),
+    .IMAG_CENTER(IMAG_CENTER)
 ) parallel_engine (
     .clk(out_stream_aclk),
     .reset(!periph_resetn),
@@ -370,6 +375,9 @@ always @(posedge out_stream_aclk) begin
                         x <= x + 1; // Move to the next pixel
                         lut_en <= 1; // Enable the LUT lookup for the next pixel
                     end
+                end else begin
+                    final_depth <= results[x]; // Keep the same depth if not ready
+                    lut_en <= 1; // Keep LUT enabled to process the same pixel
                 end
             end
             default: begin
