@@ -46,9 +46,6 @@ output logic valid_int_out
 
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
-// localparam X_SIZE = 512;
-// localparam Y_SIZE = 512;
-
 parameter  REG_FILE_SIZE = 8;
 localparam REG_FILE_AWIDTH = $clog2(REG_FILE_SIZE);
 parameter  AXI_LITE_ADDR_WIDTH = 8;
@@ -70,13 +67,19 @@ localparam AXI_ERR = 2'b10;
 // Added localparams to be interfaced with overlay
 
 localparam MAX_ITER = 200;
-localparam WORD_LENGTH = 16;
-localparam FRAC = 8;
-localparam ZOOM = 2;
-localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
-localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
+localparam WORD_LENGTH = 32;
+localparam FRAC = 28;
+localparam ZOOM = 4;
+localparam REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
+localparam IMAG_CENTER = (16'd1 <<< FRAC)/10;
 // localparam REAL_CENTER = 0;
 // localparam IMAG_CENTER = 0;
+
+// wire [31:0] MAX_ITER = regfile[0];
+// wire [31:0] ZOOM = regfile[1];
+// wire [31:0] REAL_CENTER = regfile[2];
+// wire [31:0] IMAG_CENTER = regfile[3];
+
 
 reg [31:0]                          regfile [REG_FILE_SIZE-1:0];
 reg [REG_FILE_AWIDTH-1:0]           writeAddr, readAddr;
@@ -251,25 +254,24 @@ depth_calculator#(
   .max_iter     (MAX_ITER)
 );
 
-
-pixel_to_complex#(
+pixel_to_complex #(
     .WORD_LENGTH(WORD_LENGTH),
-    .FRAC(FRAC)
-) mapper (
+    .FRAC(FRAC),
     .SCREEN_WIDTH(X_SIZE),
-    .SCREEN_HEIGHT(Y_SIZE),
+    .SCREEN_HEIGHT(Y_SIZE)
+) mapper (
     .ZOOM(ZOOM),
     .real_center(REAL_CENTER),
-    .imag_center(IMAG_CENTER),
+    .imag_center(IMAG_CENTER),  
     .clk(out_stream_aclk),
+    .rst(~periph_resetn),
     .x(x),
     .y(y),
     .real_part(re_c),
-    .im_part(im_c)
+    .im_part(im_c),
+    .sof(first),
+    .eol(lasty)
 );
-
-
-
 
 
 table_color lut_table (
@@ -296,10 +298,11 @@ wire [7:0] r, g, b;
 //     b <= final_depth * 3 / 2;
 //     delayed_valid_int <= valid_int;
 // end
-
-assign b = color[23:16];
+assign r = color[23:16];
 assign g = color[15:8];
-assign r = color[7:0];
+assign b = color[7:0];
+
+
 
 
 assign r_out = r;
