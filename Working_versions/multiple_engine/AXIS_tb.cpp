@@ -58,7 +58,7 @@ int main(int argc, char **argv, char **env)
             top->eval();
         }
 
-        if (top->valid && top->ready)
+        if (top->valid_int_out)
         {
             uint32_t tdata = top->tdata;
             uint8_t r = static_cast<uint8_t>(top->r_out);

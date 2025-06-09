@@ -26,7 +26,8 @@ module top#(
     output logic [7:0] b_out,
 
     output logic [10:0] x_out,
-    output logic [10:0] y_out
+    output logic [10:0] y_out,
+    output logic valid_int_out
 );
 
 
@@ -75,7 +76,8 @@ module top#(
         .b_out(b_out),
 
         .x_out(x_out),
-        .y_out(y_out)
+        .y_out(y_out),
+        .valid_int_out(valid_int_out)
     );
 
     //Ready signal generation

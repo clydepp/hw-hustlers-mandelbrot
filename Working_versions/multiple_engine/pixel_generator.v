@@ -54,14 +54,14 @@ output          s_axi_lite_rvalid,
 
 input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
-input           s_axi_lite_wvalid,
+input           s_axi_lite_wvalid
 
 // //Added below to make visible for testing
 
-output logic [7:0] r_out, g_out, b_out,
+// output logic [7:0] r_out, g_out, b_out,
 
-output logic [9:0] x_out,
-output logic [8:0] y_out,
+// output logic [9:0] x_out,
+// output logic [8:0] y_out,
 
 // output logic valid_int_out
 
@@ -408,6 +408,7 @@ table_color lut_table (
     .clk(out_stream_aclk),
     .depth(final_depth),
     .max_iterations(MAX_ITER),
+    .max_iter_recip(MAX_ITER_RECIPROCAL),
     .en(lut_en),
     .color(color),
     .valid(valid_int)
@@ -422,12 +423,12 @@ assign r = color[23:16];
 assign g = color[15:8];
 assign b = color[7:0];
 
-assign r_out = r;
-assign g_out = g;
-assign b_out = b;
+// assign r_out = r;
+// assign g_out = g;
+// assign b_out = b;
 
-assign x_out = x;
-assign y_out = y;
+// assign x_out = x;
+// assign y_out = y;
 
 // assign valid_int_out = valid_int;
 
