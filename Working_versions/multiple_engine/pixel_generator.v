@@ -230,23 +230,6 @@ wire lasty = (y == Y_SIZE - 1);
 //wire [7:0] frame = regfile[0];
 wire ready;
 
-// 
-
-
-// Need to define all logic
-
-// Idea for simulation: Make valid_int high after 100 clock cycles once final values been established
-
-// reg max_iter [7:0] = 200;
-
-// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
-
-// reg delayed_valid_int;
-
-// always @(posedge out_stream_aclk) begin
-//     delayed_valid_int <= valid_int;
-// end
-
 reg start;
 wire done;
 reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth

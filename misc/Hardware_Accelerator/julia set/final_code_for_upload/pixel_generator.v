@@ -32,23 +32,20 @@ output          s_axi_lite_rvalid,
 
 input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
-input           s_axi_lite_wvalid,
+input           s_axi_lite_wvalid
 
 // //Added below to make visible for testing
 
-output logic [7:0] r_out, g_out, b_out,
+// output logic [7:0] r_out, g_out, b_out,
 
-output logic [9:0] x_out,
-output logic [8:0] y_out,
+// output logic [9:0] x_out,
+// output logic [8:0] y_out,
 
-output logic valid_int_out
+// output logic valid_int_out
 );
 
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
-// localparam X_SIZE = 512;
-// localparam Y_SIZE = 512;
-
 parameter  REG_FILE_SIZE = 8;
 localparam REG_FILE_AWIDTH = $clog2(REG_FILE_SIZE);
 parameter  AXI_LITE_ADDR_WIDTH = 8;
@@ -70,30 +67,20 @@ localparam AXI_ERR = 2'b10;
 // Added localparams to be interfaced with overlay
 
 // localparam MAX_ITER = 200;
-localparam WORD_LENGTH = 32;
+// localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
-// localparam ZOOM = 2;
-// localparam ZOOM_RECIPROCAL =  // Reciprocal of zoom in Q-format
-// localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
-// localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
-// localparam [15:0] MAX_ITER_RECIPROCAL = (MAX_ITER != 0)
-//       ? ( (32'd1 << 16) / MAX_ITER )
-//       : {16{1'b0}};  
+localparam ZOOM = 4;
+// localparam REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
+// localparam IMAG_CENTER = (16'd1 <<< FRAC)/10;
+// localparam REAL_CENTER = 0;
+// localparam IMAG_CENTER = 0;
 
 wire [31:0] MAX_ITER = regfile[0];
 wire [31:0] ZOOM = regfile[1];
 wire [31:0] REAL_CENTER = regfile[2];
 wire [31:0] IMAG_CENTER = regfile[3];
-wire [31:0] ZOOM_RECIPROCAL = regfile[4];
-wire [15:0] MAX_ITER_RECIPROCAL = regfile[5];
 
 
-
-// localparam REAL_CENTER = 0;
-// localparam IMAG_CENTER = 0;
-// wire [RECIP_W-1:0] max_iter_recip = (max_iterations != 0)
-//       ? ( (32'd1 << RECIP_W) / max_iterations )
-//       : {RECIP_W{1'b0}};
 reg [31:0]                          regfile [REG_FILE_SIZE-1:0];
 reg [REG_FILE_AWIDTH-1:0]           writeAddr, readAddr;
 reg [31:0]                          readData, writeData;
@@ -242,7 +229,7 @@ end
 wire [WORD_LENGTH-1:0] re_c, im_c;
 wire [9:0] final_depth;
 wire valid_int;
-wire done;
+
 // reg max_iter [7:0] = 200;
 wire [23:0] color;
 // Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
@@ -263,39 +250,35 @@ depth_calculator#(
   .re_c         (re_c), // input real part of c (Q-format)
   .im_c         (im_c), // input imag part of c (Q-format)
   .final_depth  (final_depth), // final depth at done [9:0]
-  .done         (done),  // done flag
+  .done         (valid_int),  // done flag
   .max_iter     (MAX_ITER)
 );
 
-
-pixel_to_complex#(
+pixel_to_complex #(
     .WORD_LENGTH(WORD_LENGTH),
-    .FRAC(FRAC)
+    .FRAC(FRAC),
+    .SCREEN_WIDTH(X_SIZE),
+    .SCREEN_HEIGHT(Y_SIZE)
 ) mapper (
-    // .SCREEN_WIDTH(X_SIZE),
-    // .SCREEN_HEIGHT(Y_SIZE),
     .ZOOM(ZOOM),
-    .ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
     .real_center(REAL_CENTER),
-    .imag_center(IMAG_CENTER),
+    .imag_center(IMAG_CENTER),  
     .clk(out_stream_aclk),
+    .rst(~periph_resetn),
     .x(x),
     .y(y),
     .real_part(re_c),
-    .im_part(im_c)
+    .im_part(im_c),
+    .sof(first),
+    .eol(lasty)
 );
-
-
-
 
 
 table_color lut_table (
     .clk(out_stream_aclk),
     .depth(final_depth),
     .max_iterations(MAX_ITER),
-    .max_iter_recip(MAX_ITER_RECIPROCAL),
-    .en(done),
-    .valid_int(valid_int), // valid signal to indicate when a new pixel is ready
+    .en(1'b1),
     .color(color)
 );
 //wire valid_int = 1'b1;
@@ -315,20 +298,21 @@ wire [7:0] r, g, b;
 //     b <= final_depth * 3 / 2;
 //     delayed_valid_int <= valid_int;
 // end
-
-assign b = color[23:16];
+assign r = color[23:16];
 assign g = color[15:8];
-assign r = color[7:0];
+assign b = color[7:0];
 
 
-assign r_out = r;
-assign g_out = g;
-assign b_out = b;
 
-assign x_out = x;
-assign y_out = y;
 
-assign valid_int_out = valid_int;
+// assign r_out = r;
+// assign g_out = g;
+// assign b_out = b;
+
+// assign x_out = x;
+// assign y_out = y;
+
+// assign valid_int_out = valid_int;
 
 // // DEFAULT PIXEL_Gen END //
 
