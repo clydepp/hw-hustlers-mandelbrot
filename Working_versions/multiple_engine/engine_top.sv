@@ -114,7 +114,7 @@ state_engine state_e;
 //     end
     
 // end
-
+logic [9:0] temp_x;
 //engine state logic 
 always_ff @(posedge clk) begin
 
@@ -123,6 +123,7 @@ always_ff @(posedge clk) begin
         next_x <= 0;
         y <= 0;
         engine_start <= '0; // Reset engine start signals
+        temp_x <= 0; // Reset temp_x
         //engine_done <= '0; 
         for (int i =0; i < NUM_ENGINES; i++) begin
             engine_x[i] <= 0; // Reset x coordinates for the next line
@@ -190,7 +191,7 @@ always_ff @(posedge clk) begin
                 // if next x not greater than screen width, continue
                 end else begin
     
-                    int temp_x = next_x; // in case multiple engines are done in the same cycle
+                    temp_x = next_x; // in case multiple engines are done in the same cycle
     
                     for(int i = 0; i < NUM_ENGINES; i++) begin
                         if(engine_done[i] && temp_x < SCREEN_WIDTH) begin
@@ -217,8 +218,8 @@ end
 
 assign module_done = fifo_empty && !busy && (engine_eol == '1); // Module is done when FIFO is empty, not busy, and line is engine_eol
 
-logic pixel_complex_eol;
-assign pixel_complex_eol = (engine_eol == '1);
+//logic pixel_complex_eol;
+//assign pixel_complex_eol = (engine_eol == '1);
 
 genvar i;
 
@@ -239,7 +240,7 @@ generate
             .re_c(re_c),            // input real part of c (Q-format)
             .im_c(im_c),            // input imag part of c (Q-format)
             .max_iter(MAX_ITER),    // Maximum iterations for the mandelbrot calculation
-            .eol(module_done),     // End of line for top
+            //.eol(module_done),     // End of line for top
             
             .final_depth(engine_depth[i]), // output depth for each engine
             .done(engine_done[i])  // might need to make it such that it can output x and y
@@ -322,13 +323,13 @@ always_ff @(posedge clk) begin
         depth_out <= 0;
         addr_out <= 0;
         we_out <= 0;
-        engine_eol <= 0;
+        // engine_eol <= 0;
         // bram_en_a <= 0;
         // bram_we_a <= 4'b0000;
     end else begin
         case (state_f)
             IDLE: begin
-                engine_eol <= 0;
+                // engine_eol <= 0;
 
                 if (!fifo_empty) begin
                     fifo_ren <= 1; // Request data

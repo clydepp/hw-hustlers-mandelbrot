@@ -13,8 +13,7 @@ module pixel_to_complex#(
     input  logic [10:0]  x,
     input  logic [10:0]  y,
     output logic signed [WORD_LENGTH-1:0] real_part,
-    output logic signed [WORD_LENGTH-1:0] im_part,
-    output logic done
+    output logic signed [WORD_LENGTH-1:0] im_part
 );
     localparam int SCREEN_HEIGHT = 480;
     localparam int SCREEN_WIDTH  = 640;

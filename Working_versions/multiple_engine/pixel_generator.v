@@ -234,7 +234,8 @@ wire ready;
 
 reg start;
 wire done;
-reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
+// reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
+// reg [9:0] results [63:0];
 wire [9:0] results_din; 
 wire [$clog2(X_SIZE)-1:0] results_addr; 
 wire results_we;
@@ -329,7 +330,7 @@ always @(posedge out_stream_aclk) begin
         lut_state <= LUT_IDLE;
         x <= 0;
         y <= 0;
-        start <= 0;
+        // start <= 0;
         lut_en <= 0; 
     end
     else begin
