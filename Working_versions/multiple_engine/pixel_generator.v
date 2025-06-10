@@ -96,7 +96,10 @@ localparam AXI_ERR = 2'b10;
 
 // Added localparams to be interfaced with overlay
 
-localparam MAX_ITER = 200;
+  
+
+localparam MAX_ITER = 256;
+localparam MAX_ITER_LOG = 8; // log2(MAX_ITER) = 8 for 256 iterations
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
 localparam ZOOM = 2;
@@ -234,7 +237,8 @@ wire ready;
 
 reg start;
 wire done;
-reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
+// reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
+// reg [9:0] results [63:0];
 wire [9:0] results_din; 
 wire [$clog2(X_SIZE)-1:0] results_addr; 
 wire results_we;
@@ -243,7 +247,7 @@ engine_top#(
     .FRAC(FRAC),
     .WORD_LENGTH(WORD_LENGTH),
     .ZOOM(ZOOM),
-    .ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
+    //.ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
     .REAL_CENTER(REAL_CENTER),
     .IMAG_CENTER(IMAG_CENTER)
 ) parallel_engine (
@@ -300,8 +304,7 @@ localparam LUT_DONE = 2'b10;
 
 reg [1:0] lut_state = LUT_IDLE;
 
-wire valid_int;
-wire [23:0] color;
+reg valid_int;
 reg lut_en; 
 reg [9:0] final_depth; // Final depth to be used for color mapping
 
@@ -329,6 +332,7 @@ always @(posedge out_stream_aclk) begin
         lut_state <= LUT_IDLE;
         x <= 0;
         y <= 0;
+        start <= 0;
         lut_en <= 0; 
     end
     else begin
@@ -386,24 +390,31 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
-table_color lut_table (
-    .clk(out_stream_aclk),
-    .depth(final_depth),
-    .max_iterations(MAX_ITER),
-    .max_iter_recip(MAX_ITER_RECIPROCAL),
-    .en(lut_en),
-    .color(color),
-    .valid(valid_int)
-);
+// table_color lut_table (
+//     .clk(out_stream_aclk),
+//     .depth(final_depth),
+//     .max_iterations(MAX_ITER),
+//     .max_iter_recip(MAX_ITER_RECIPROCAL),
+//     .en(lut_en),
+//     .color(color),
+//     .valid(valid_int)
+// );
 
 //wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
 // valid_int high when you have finished generating a pixel
 
-wire [7:0] r, g, b;
-
-assign r = color[23:16];
-assign g = color[15:8];
-assign b = color[7:0];
+wire [7:0] r, g, b, intensity, color;
+always_ff @(posedge out_stream_aclk) begin
+    if (lut_en) begin
+        valid_int <= 1'b1; // Set valid_int high when done
+    end
+    else begin
+        valid_int <= 1'b0; // Reset valid_int otherwise
+    end
+end
+// assign r = color[23:16];
+// assign g = color[15:8];
+// assign b = color[7:0];
 
 assign r_out = r;
 assign g_out = g;
@@ -411,7 +422,13 @@ assign b_out = b;
 
 assign x_out = x;
 assign y_out = y;
-
+assign b = intensity;
+assign g = intensity;
+assign r = intensity;
+assign color = (final_depth >= MAX_ITER) ? 255 :
+                   ((MAX_ITER_LOG > 8) ? (final_depth >> (MAX_ITER_LOG - 8)) :
+                                          (final_depth << (8 - MAX_ITER_LOG)));
+assign intensity = 255 - color; // Invert the color for visualization   
 assign valid_int_out = valid_int;
 
 // If you can't see something on the top level look to make sure all signals connected properly

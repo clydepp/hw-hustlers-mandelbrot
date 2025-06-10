@@ -5,7 +5,7 @@ module engine_top #(
     parameter   MAX_ITER = 200,
     parameter   DATA_WIDTH = 20, // x (10 bits) + depth (10 bits)
     parameter   ZOOM = 1,
-    parameter   ZOOM_RECIPROCAL = 32'h00000001, // 1/ZOOM in Qm.n format
+    // parameter   ZOOM_RECIPROCAL = 32'h00000001, // 1/ZOOM in Qm.n format
     parameter   REAL_CENTER = 32'hC0000000, // in Q4.28 format
     parameter   IMAG_CENTER = 32'h00000000, // in Q4.28 format
     parameter   FRAC = 28, // Fractional bits for Q-format
@@ -116,7 +116,7 @@ state_engine state_e;
 // end
 
 // logic [9:0] temp_x; // Uncomment maybe for synthesis 
-
+  
 //engine state logic 
 always_ff @(posedge clk) begin
 
@@ -125,7 +125,10 @@ always_ff @(posedge clk) begin
         next_x <= 0;
         y <= 0;
         engine_start <= '0; // Reset engine start signals
+      
         //temp_x <= 0; // Uncomment maybe for synthesis 
+        int temp_x <= 0; // Reset temp_x
+      
         //engine_done <= '0; 
         for (int i =0; i < NUM_ENGINES; i++) begin
             engine_x[i] <= 0; // Reset x coordinates for the next line
@@ -254,7 +257,7 @@ generate
             .FRAC(FRAC)
         )  mapper (
             .ZOOM(ZOOM),
-            .ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
+            //.ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
             .real_center(REAL_CENTER),
             .imag_center(IMAG_CENTER),
             .clk(clk),
@@ -326,13 +329,13 @@ always_ff @(posedge clk) begin
         depth_out <= 0;
         addr_out <= 0;
         we_out <= 0;
-        engine_eol <= 0;
+        // engine_eol <= 0;
         // bram_en_a <= 0;
         // bram_we_a <= 4'b0000;
     end else begin
         case (state_f)
             IDLE: begin
-                engine_eol <= 0;
+                // engine_eol <= 0;
 
                 if (!fifo_empty) begin
                     fifo_ren <= 1; // Request data
