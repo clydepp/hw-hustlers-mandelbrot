@@ -54,16 +54,16 @@ output          s_axi_lite_rvalid,
 
 input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
-input           s_axi_lite_wvalid
+input           s_axi_lite_wvalid,
 
 // //Added below to make visible for testing
 
-// output logic [7:0] r_out, g_out, b_out,
+output logic [7:0] r_out, g_out, b_out,
 
-// output logic [9:0] x_out,
-// output logic [8:0] y_out,
+output logic [9:0] x_out,
+output logic [8:0] y_out,
 
-// output logic valid_int_out
+output logic valid_int_out
 
 //driven in parallel_engine
 // output [11:0]   bram_addr_a,
@@ -96,7 +96,10 @@ localparam AXI_ERR = 2'b10;
 
 // Added localparams to be interfaced with overlay
 
-localparam MAX_ITER = 200;
+  
+
+localparam MAX_ITER = 256;
+localparam MAX_ITER_LOG = 8; // log2(MAX_ITER) = 8 for 256 iterations
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
 localparam ZOOM = 2;
@@ -244,7 +247,7 @@ engine_top#(
     .FRAC(FRAC),
     .WORD_LENGTH(WORD_LENGTH),
     .ZOOM(ZOOM),
-    .ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
+    //.ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
     .REAL_CENTER(REAL_CENTER),
     .IMAG_CENTER(IMAG_CENTER)
 ) parallel_engine (
@@ -301,8 +304,7 @@ localparam LUT_DONE = 2'b10;
 
 reg [1:0] lut_state = LUT_IDLE;
 
-wire valid_int;
-wire [23:0] color;
+reg valid_int;
 reg lut_en; 
 reg [9:0] final_depth; // Final depth to be used for color mapping
 
@@ -330,7 +332,7 @@ always @(posedge out_stream_aclk) begin
         lut_state <= LUT_IDLE;
         x <= 0;
         y <= 0;
-        // start <= 0;
+        start <= 0;
         lut_en <= 0; 
     end
     else begin
@@ -388,33 +390,46 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
-table_color lut_table (
-    .clk(out_stream_aclk),
-    .depth(final_depth),
-    .max_iterations(MAX_ITER),
-    .max_iter_recip(MAX_ITER_RECIPROCAL),
-    .en(lut_en),
-    .color(color),
-    .valid(valid_int)
-);
+// table_color lut_table (
+//     .clk(out_stream_aclk),
+//     .depth(final_depth),
+//     .max_iterations(MAX_ITER),
+//     .max_iter_recip(MAX_ITER_RECIPROCAL),
+//     .en(lut_en),
+//     .color(color),
+//     .valid(valid_int)
+// );
 
 //wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
 // valid_int high when you have finished generating a pixel
 
-wire [7:0] r, g, b;
+wire [7:0] r, g, b, intensity, color;
+always_ff @(posedge out_stream_aclk) begin
+    if (lut_en) begin
+        valid_int <= 1'b1; // Set valid_int high when done
+    end
+    else begin
+        valid_int <= 1'b0; // Reset valid_int otherwise
+    end
+end
+// assign r = color[23:16];
+// assign g = color[15:8];
+// assign b = color[7:0];
 
-assign r = color[23:16];
-assign g = color[15:8];
-assign b = color[7:0];
+assign r_out = r;
+assign g_out = g;
+assign b_out = b;
 
-// assign r_out = r;
-// assign g_out = g;
-// assign b_out = b;
-
-// assign x_out = x;
-// assign y_out = y;
-
-// assign valid_int_out = valid_int;
+assign x_out = x;
+assign y_out = y;
+assign b = intensity;
+assign g = intensity;
+assign r = intensity;
+assign color = (final_depth >= MAX_ITER) ? 255 :
+                   ((MAX_ITER_LOG > 8) ? (final_depth >> (MAX_ITER_LOG - 8)) :
+                                          (final_depth << (8 - MAX_ITER_LOG)));
+assign intensity = 255 - color; // Invert the color for visualization   
+assign valid_int_out = valid_int;
 
 // If you can't see something on the top level look to make sure all signals connected properly
 
