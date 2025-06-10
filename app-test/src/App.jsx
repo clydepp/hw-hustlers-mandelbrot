@@ -27,6 +27,7 @@ function App() {
   const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
   const [isDarkMode, setIsDarkMode] = createSignal(false);
   const [isModalOpen, setIsModalOpen] = createSignal(false);
+  const [colourScheme, setColourScheme] = createSignal("classic");
 
   // modal signals
   const [isOptiModal, setIsOptiModal] = createSignal(false);
@@ -62,7 +63,7 @@ function App() {
       const newValue = Math.floor(mouseWheelDelta() + (-event.deltaY) * 0.01);
       
       // Cap between 0 and 2^32 (4,294,967,296)
-      const clampedValue = Math.max(1, Math.min(newValue, Math.pow(2, 32)));
+      const clampedValue = Math.max(0, Math.min(newValue, Math.pow(2, 32)));
       
       setMouseWheelDelta(clampedValue);
       console.log('Mouse wheel:', -event.deltaY, 'Total:', clampedValue);
@@ -107,6 +108,10 @@ function App() {
     setCounter(counter() - 10);
   };
 
+  const changeColourScheme = (scheme) => {
+    setColourScheme(scheme);
+  };
+
   // Updated input handlers
   const handleCenterXInput = (e) => {
     const floatValue = parseFloat(e.target.value) || 0;
@@ -126,7 +131,7 @@ function App() {
 
   // WebSocket connection on mount
   onMount(() => {
-    const ws = new WebSocket('ws://192.168.137.175:8000'); // No '/websocket' endpoint
+    const ws = new WebSocket('ws://192.168.137.38:8000'); // No '/websocket' endpoint
     
     ws.onopen = () => {
       console.log('Connected to PYNQ WebSocket server!');
@@ -156,11 +161,11 @@ function App() {
     const ws = websocket();
     if (ws && ws.readyState === WebSocket.OPEN) {
       const params = {
-        re_c: centerX(),
-        im_c: centerY(), 
+        re_c: -0.75, // centerX()
+        im_c: 0.1, // centerY(), 
         zoom: mouseWheelDelta(),
         max_iter: counter(),
-        colour_sch: "classic"
+        colour_sch: colourScheme()
       };
       ws.send(JSON.stringify(params));
     }
@@ -242,6 +247,8 @@ function App() {
                     showNumbers={showNumbers()} 
                     onMinusOne={handleMinusOne}
                     isDarkMode={isDarkMode()}
+                    onSchemeChange={changeColourScheme}
+                    currentColourScheme={colourScheme()}
                   />
                 </div>
                 <Button onClick={handlePlusClick} isDarkMode={isDarkMode()}>

@@ -9,6 +9,7 @@ export default function Button (props) {
       style={props.customStyle}
       onClick={props.onClick}
       onDoubleClick={props.onDoubleClick}
+      onMouseEnter={props.onMouseEnter}
     >
       {props.children}
     </div>

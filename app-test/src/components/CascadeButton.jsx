@@ -22,6 +22,12 @@ export default function CascadeButton (props){
     }
   };
 
+  const handleColourHover = (colourScheme) => {
+  if (props.onSchemeChange && !props.showNumbers) {
+    props.onSchemeChange(colourScheme);
+  }
+};
+
   return (
     <div 
       class="flex flex-row gap-1"
@@ -48,18 +54,21 @@ export default function CascadeButton (props){
         <Button 
           customClass="bg-radial-[at_25%_25%] from-white to-zinc-900 to-66%"
           isDarkMode={props.isDarkMode}
+          onMouseEnter={() => handleColourHover('grayscale')}
         >
           GS
         </Button>
         <Button
           customClass="bg-radial-[at_65%_25%] from-orange-300 via-blue-500 to-indigo-500 to-90%"
           isDarkMode={props.isDarkMode}
+          onMouseEnter={() => handleColourHover('classic')}
         >
           CL
         </Button>
         <Button
           customClass="bg-radial-[at_10%_85%] from-purple-800 via-orange-500 to-orange-300 to-90%"
           isDarkMode={props.isDarkMode}
+          onMouseEnter={() => handleColourHover('sunset')}
         >
           SS
         </Button>
