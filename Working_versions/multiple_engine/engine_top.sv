@@ -127,7 +127,7 @@ always_ff @(posedge clk) begin
         engine_start <= '0; // Reset engine start signals
       
         //temp_x <= 0; // Uncomment maybe for synthesis 
-        int temp_x <= 0; // Reset temp_x
+        //int temp_x <= 0; // Reset temp_x
       
         //engine_done <= '0; 
         for (int i =0; i < NUM_ENGINES; i++) begin
@@ -329,13 +329,13 @@ always_ff @(posedge clk) begin
         depth_out <= 0;
         addr_out <= 0;
         we_out <= 0;
-        // engine_eol <= 0;
+        engine_eol <= 0;
         // bram_en_a <= 0;
         // bram_we_a <= 4'b0000;
     end else begin
         case (state_f)
             IDLE: begin
-                // engine_eol <= 0;
+                engine_eol <= 0;
 
                 if (!fifo_empty) begin
                     fifo_ren <= 1; // Request data

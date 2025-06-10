@@ -102,7 +102,7 @@ localparam MAX_ITER = 256;
 localparam MAX_ITER_LOG = 8; // log2(MAX_ITER) = 8 for 256 iterations
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
-localparam ZOOM = 2;
+localparam ZOOM = 1;
 localparam ZOOM_RECIPROCAL = 32'd1<<(FRAC - 1); // Reciprocal of zoom in Q-format
 localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
 localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
@@ -237,7 +237,7 @@ wire ready;
 
 reg start;
 wire done;
-// reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
+reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
 // reg [9:0] results [63:0];
 wire [9:0] results_din; 
 wire [$clog2(X_SIZE)-1:0] results_addr; 

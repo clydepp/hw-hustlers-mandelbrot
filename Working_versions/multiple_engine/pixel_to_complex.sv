@@ -6,7 +6,7 @@ module pixel_to_complex#(
     // input int SCREEN_WIDTH,
     // input int SCREEN_HEIGHT,
     input  int ZOOM,
-    input logic unsigned [31:0] ZOOM_RECIPROCAL, // 1/ZOOM in Qm.n format
+    //input logic unsigned [31:0] ZOOM_RECIPROCAL, // 1/ZOOM in Qm.n format
     input  logic signed [WORD_LENGTH-1:0] real_center, // in Q4.28
     input  logic signed [WORD_LENGTH-1:0] imag_center, // 
     input  logic        clk,
@@ -26,12 +26,11 @@ module pixel_to_complex#(
     always_comb begin
         
 
-        real_width_temp  = 3 * one * ZOOM_RECIPROCAL;
-        imag_height_temp = 2 * one * ZOOM_RECIPROCAL;
-        real_width  = real_width_temp  >>> FRAC;
-        imag_height = imag_height_temp >>> FRAC;
-    //    real_width  =  (3 * one * ZOOM_RECIPROCAL)>>FRAC;
-    //    imag_height = ( 2* one * ZOOM_RECIPROCAL)>>FRAC;
+        //real_width_temp  = (3 * one) >>> ZOOM; // Qm.n * Q0.16 = Qm.n
+       // imag_height_temp = (2 * one) >>> ZOOM; // Qm.n * Q0.16 = Qm.n
+        real_width  = (3 * one) >>> ZOOM; // same for imag_height
+        imag_height = (2 * one) >>> ZOOM; // Qm.n * Q0.16 = Qm.n
+        //imag_height = imag_height_temp >>> FRAC;
         real_min = real_center - (real_width >>> 1);
         imag_max = imag_center + (imag_height >>> 1);
 
