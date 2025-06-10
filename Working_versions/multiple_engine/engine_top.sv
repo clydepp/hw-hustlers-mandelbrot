@@ -115,6 +115,8 @@ state_engine state_e;
     
 // end
 
+// logic [9:0] temp_x; // Uncomment maybe for synthesis 
+
 //engine state logic 
 always_ff @(posedge clk) begin
 
@@ -123,6 +125,7 @@ always_ff @(posedge clk) begin
         next_x <= 0;
         y <= 0;
         engine_start <= '0; // Reset engine start signals
+        //temp_x <= 0; // Uncomment maybe for synthesis 
         //engine_done <= '0; 
         for (int i =0; i < NUM_ENGINES; i++) begin
             engine_x[i] <= 0; // Reset x coordinates for the next line
@@ -191,7 +194,8 @@ always_ff @(posedge clk) begin
                 end else begin
     
                     int temp_x = next_x; // in case multiple engines are done in the same cycle
-    
+                    //temp_x = next_x; // Uncomment maybe for synthesis
+
                     for(int i = 0; i < NUM_ENGINES; i++) begin
                         if(engine_done[i] && temp_x < SCREEN_WIDTH) begin
                             engine_x[i] <= temp_x; // Assign the x coordinate to the engine
@@ -217,8 +221,8 @@ end
 
 assign module_done = fifo_empty && !busy && (engine_eol == '1); // Module is done when FIFO is empty, not busy, and line is engine_eol
 
-logic pixel_complex_eol;
-assign pixel_complex_eol = (engine_eol == '1);
+// logic pixel_complex_eol;
+// assign pixel_complex_eol = (engine_eol == '1);
 
 genvar i;
 

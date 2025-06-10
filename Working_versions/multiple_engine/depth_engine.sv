@@ -37,22 +37,13 @@ logic signed [WORD_LENGTH-1:0] im_z;
 
 logic signed [2*WORD_LENGTH-1:0] re_z_2;
 logic signed [2*WORD_LENGTH-1:0] im_z_2;
-logic signed [2*WORD_LENGTH-1:0] cross_product;                             // cross product 2 * re_z * im_z
-
-//logic [7:0] max_iter = 10;                          // need to get maximum depth from registers when actually implemented
-
+logic signed [2*WORD_LENGTH-1:0] cross_product;                            
 logic [9:0] depth;
-
-//logic [2:0] count;      // Created in testing to see gap between signals to hopefully fix issues
-
 localparam logic [2*WORD_LENGTH-1:0] THRESHOLD = 32'd4 * (1<<FRAC) * (1<<FRAC);
 localparam int HALF_WIDTH = WORD_LENGTH / 2;
-localparam int lim1 = (WORD_LENGTH >> 1) - 1; // limit for low part of the word
-localparam int lim2 = WORD_LENGTH - 1; // limit for high part of the word
 logic signed [2*WORD_LENGTH-1:0] pr0, pr1, pr2;  // re low×low, hi×low, hi×hi
 logic signed [2*WORD_LENGTH-1:0] pi0, pi1, pi2;  // im low×low, hi×low, hi×hi
 logic signed [2*WORD_LENGTH-1:0] pc0, pc1, pc2, pc3; // re_lo×im_lo, re_hi×im_lo, re_lo×im_hi, re_hi×im_hi
-// next_state logic
 logic signed [HALF_WIDTH-1:0] re_z_lo, re_z_hi;
 logic signed [HALF_WIDTH-1:0] im_z_lo, im_z_hi;
 
@@ -63,6 +54,8 @@ always_comb begin
     im_z_lo = im_z[HALF_WIDTH-1:0];
     im_z_hi = im_z[WORD_LENGTH-1:HALF_WIDTH];
 end
+
+// Main sequential state machine logic
 always_ff @(posedge sysclk) begin
 
     if(reset) begin
@@ -72,6 +65,12 @@ always_ff @(posedge sysclk) begin
         depth <= 0;
         done <= 0;
         final_depth <= 0;
+        cross_product <= 0;
+        pr0 <= 0; pr1 <= 0; pr2 <= 0;
+        pi0 <= 0; pi1 <= 0; pi2 <= 0;
+        pc0 <= 0; pc1 <= 0; pc2 <= 0; pc3 <= 0;
+        re_z_2 <= 0;
+        im_z_2 <= 0;
     end
     
     else begin
@@ -121,23 +120,23 @@ always_ff @(posedge sysclk) begin
                          ({{(HALF_WIDTH){pr1[2*HALF_WIDTH-1]}}, pr1} << (HALF_WIDTH + 1)) + 
                          {{(WORD_LENGTH-2*HALF_WIDTH){pr0[2*HALF_WIDTH-1]}}, pr0};
                 
-                // For im_z²: pi2*2^(2n) + 2*pi1*2^n + pi0  
-                im_z_2 <= ({{(WORD_LENGTH-2*HALF_WIDTH){pi2[2*HALF_WIDTH-1]}}, pi2} << WORD_LENGTH) + 
-                         ({{(HALF_WIDTH){pi1[2*HALF_WIDTH-1]}}, pi1} << (HALF_WIDTH + 1)) + 
-                         {{(WORD_LENGTH-2*HALF_WIDTH){pi0[2*HALF_WIDTH-1]}}, pi0};
+        // For im_z²: pi2*2^(2n) + 2*pi1*2^n + pi0  
+        im_z_2 <= ({{(WORD_LENGTH-2*HALF_WIDTH){pi2[2*HALF_WIDTH-1]}}, pi2} << WORD_LENGTH) + 
+                    ({{(HALF_WIDTH){pi1[2*HALF_WIDTH-1]}}, pi1} << (HALF_WIDTH + 1)) + 
+                    {{(WORD_LENGTH-2*HALF_WIDTH){pi0[2*HALF_WIDTH-1]}}, pi0};
                 
-                // For cross product: 2 * (pc3*2^(2n) + pc2*2^n + pc1*2^n + pc0)
-                cross_product <= ((({{(WORD_LENGTH-2*HALF_WIDTH){pc3[2*HALF_WIDTH-1]}}, pc3} << WORD_LENGTH) + 
-                                  ({{(HALF_WIDTH){pc2[2*HALF_WIDTH-1]}}, pc2} << HALF_WIDTH) + 
-                                  ({{(HALF_WIDTH){pc1[2*HALF_WIDTH-1]}}, pc1} << HALF_WIDTH) + 
-                                  {{(WORD_LENGTH-2*HALF_WIDTH){pc0[2*HALF_WIDTH-1]}}, pc0}) << 1);
+        // For cross product: 2 * (pc3*2^(2n) + pc2*2^n + pc1*2^n + pc0)
+        cross_product <= ((({{(WORD_LENGTH-2*HALF_WIDTH){pc3[2*HALF_WIDTH-1]}}, pc3} << WORD_LENGTH) + 
+                            ({{(HALF_WIDTH){pc2[2*HALF_WIDTH-1]}}, pc2} << HALF_WIDTH) + 
+                            ({{(HALF_WIDTH){pc1[2*HALF_WIDTH-1]}}, pc1} << HALF_WIDTH) + 
+                            {{(WORD_LENGTH-2*HALF_WIDTH){pc0[2*HALF_WIDTH-1]}}, pc0}) << 1);
         end
         // need to compute Z_re
         ITER_3: begin
          
             re_z  <= (re_z_2   >>> FRAC) - (im_z_2  >>> FRAC) + re_c;
-                    im_z  <= (cross_product >>> FRAC)   + im_c;
-                    depth <= depth + 1;
+            im_z  <= (cross_product >>> FRAC)   + im_c;
+            depth <= depth + 1;
             done <= 0;
         end
 
