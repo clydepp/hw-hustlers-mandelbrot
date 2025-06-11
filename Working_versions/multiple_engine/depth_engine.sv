@@ -53,17 +53,17 @@ end
 always_ff @(posedge sysclk) begin
     if(reset) begin
         current_state <= IDLE;
-        re_z <= 0;
-        im_z <= 0;
-        depth <= 0;
+        // re_z <= 0;
+        // im_z <= 0;
+        // depth <= 0;
         done <= 0;
-        final_depth <= 0;
-        cross_product <= 0; 
-        pr0 <= 0; pr1 <= 0; pr2 <= 0;
-        pi0 <= 0; pi1 <= 0; pi2 <= 0;
-        pc0 <= 0; pc1 <= 0; pc2 <= 0; pc3 <= 0;
-        re_z_2 <= 0;
-        im_z_2 <= 0;
+        // final_depth <= 0;
+        // cross_product <= 0; 
+        // pr0 <= 0; pr1 <= 0; pr2 <= 0;
+        // pi0 <= 0; pi1 <= 0; pi2 <= 0;
+        // pc0 <= 0; pc1 <= 0; pc2 <= 0; pc3 <= 0;
+        // re_z_2 <= 0;
+        // im_z_2 <= 0;
     end
     
     else begin

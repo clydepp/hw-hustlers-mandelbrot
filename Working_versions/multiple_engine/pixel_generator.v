@@ -287,12 +287,13 @@ integer i;
 
 //write results each line
 always @(posedge out_stream_aclk) begin
-    if (!periph_resetn) begin
-        for(i=0; i < 640; i = i + 1) begin
-            results[i] = 10'd0;
-        end
-    end 
-    else if (results_we) begin
+    // if (!periph_resetn) begin
+    //     for(i=0; i < 640; i = i + 1) begin
+    //         results[i] = 10'd0;
+    //     end
+    // end 
+    // else 
+    if (results_we) begin
         results[results_addr] <= results_din;
     end
 end

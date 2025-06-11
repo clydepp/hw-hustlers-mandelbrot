@@ -130,9 +130,9 @@ always_ff @(posedge clk) begin
         //int temp_x <= 0; // Reset temp_x
       
         //engine_done <= '0; 
-        for (int i =0; i < NUM_ENGINES; i++) begin
-            engine_x[i] <= 0; // Reset x coordinates for the next line
-        end
+        // for (int i =0; i < NUM_ENGINES; i++) begin
+        //     engine_x[i] <= 0; // Reset x coordinates for the next line
+        // end
         engine_eol <= '0; // Reset engine_eol signal
         state_e <= E_IDLE; // Reset state machine
         
@@ -326,8 +326,8 @@ always_ff @(posedge clk) begin
     if (reset) begin
         state_f <= IDLE;
         fifo_ren <= 0;
-        depth_out <= 0;
-        addr_out <= 0;
+        //depth_out <= 0;
+        //addr_out <= 0;
         we_out <= 0;
         // engine_eol <= 0;
         // bram_en_a <= 0;

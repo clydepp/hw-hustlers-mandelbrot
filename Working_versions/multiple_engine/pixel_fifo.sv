@@ -30,7 +30,7 @@ module pixel_fifo #(
             write_ptr <= 0;
             read_ptr <= 0;
             count  <= 0;
-            data_out <= 0;
+            // data_out <= 0;
         end else begin
             
             int temp_count = count; // Temporary variable to hold count
