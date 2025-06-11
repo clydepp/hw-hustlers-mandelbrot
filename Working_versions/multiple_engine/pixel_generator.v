@@ -104,7 +104,7 @@ localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
 localparam ZOOM = 1;
 localparam ZOOM_RECIPROCAL = 32'd1<<(FRAC - 1); // Reciprocal of zoom in Q-format
-localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
+localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
 localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
 localparam [15:0] MAX_ITER_RECIPROCAL = (MAX_ITER != 0)
       ? ( (32'd1 << 16) / MAX_ITER )
