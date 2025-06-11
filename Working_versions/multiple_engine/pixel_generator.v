@@ -405,7 +405,7 @@ end
 // valid_int high when you have finished generating a pixel
 
 wire [7:0] r, g, b, intensity, color;
-always_ff @(posedge out_stream_aclk) begin
+always @(posedge out_stream_aclk) begin
     if (lut_en) begin
         valid_int <= 1'b1; // Set valid_int high when done
     end
