@@ -140,7 +140,7 @@ always_ff @(posedge clk) begin
         case (state_e)
             E_IDLE: begin
                 //done <= 0; // Reset done signal
-
+                engine_eol <= 0;
                 if(start && !busy) begin
                     busy <= 1;
                     next_x <= 0; 
@@ -329,13 +329,13 @@ always_ff @(posedge clk) begin
         depth_out <= 0;
         addr_out <= 0;
         we_out <= 0;
-        engine_eol <= 0;
+        // engine_eol <= 0;
         // bram_en_a <= 0;
         // bram_we_a <= 4'b0000;
     end else begin
         case (state_f)
             IDLE: begin
-                engine_eol <= 0;
+                // engine_eol <= 0;
 
                 if (!fifo_empty) begin
                     fifo_ren <= 1; // Request data

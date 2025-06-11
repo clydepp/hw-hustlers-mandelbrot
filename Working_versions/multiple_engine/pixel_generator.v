@@ -332,7 +332,7 @@ always @(posedge out_stream_aclk) begin
         lut_state <= LUT_IDLE;
         x <= 0;
         y <= 0;
-        start <= 0;
+        //start <= 0;
         lut_en <= 0; 
     end
     else begin
