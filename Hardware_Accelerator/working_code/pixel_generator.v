@@ -71,7 +71,7 @@ localparam AXI_ERR = 2'b10;
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
 
-localparam MAX_ITER = 1024;
+localparam MAX_ITER = 256;
 localparam MAX_ITER_LOG = 9; // Change in accordance with max_iter
 localparam ZOOM = 4;
 localparam ZOOM_RECIPROCAL = 32'd1<<(FRAC - 1); // Reciprocal of zoom in Q-format

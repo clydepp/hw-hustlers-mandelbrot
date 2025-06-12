@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 
-#define ENDTIME 30000000
+#define ENDTIME 60000000
 #define TIMEOUT 50
 
 int main(int argc, char **argv, char **env)
@@ -28,8 +28,8 @@ int main(int argc, char **argv, char **env)
     csv << "x,y,r,g,b\n";
 
     int x = 0, y = 0;
-    const int X_SIZE = 640;
-    const int Y_SIZE = 480;
+    const int X_SIZE = 960;
+    const int Y_SIZE = 720;
 
     std::cout << "hello" << std::endl;
 

@@ -1,6 +1,8 @@
 module pixel_to_complex#(
     parameter int WORD_LENGTH = 32,
-    parameter int FRAC = 28
+    parameter int FRAC = 28,
+    parameter int SCREEN_WIDTH = 960,
+    parameter int SCREEN_HEIGHT = 720
  )(
     
     // input int SCREEN_WIDTH,
@@ -15,8 +17,6 @@ module pixel_to_complex#(
     output logic signed [WORD_LENGTH-1:0] real_part,
     output logic signed [WORD_LENGTH-1:0] im_part
 );
-    localparam int SCREEN_HEIGHT = 480;
-    localparam int SCREEN_WIDTH  = 640;
     logic signed [WORD_LENGTH-1:0] real_min, real_width;
     logic signed [WORD_LENGTH-1:0] imag_max, imag_height;
     logic signed [WORD_LENGTH-1:0] x_scaled, y_scaled;

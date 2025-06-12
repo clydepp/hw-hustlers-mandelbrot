@@ -1,5 +1,5 @@
 module single_fifo #(
-    parameter int DATA_WIDTH = 20, // x, depth
+    parameter int DATA_WIDTH = 21, // x, depth
     parameter int DEPTH = 16
 )(
     input logic clk,

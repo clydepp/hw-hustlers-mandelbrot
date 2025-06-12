@@ -60,8 +60,8 @@ module pixel_generator(
     
     output logic [7:0] r_out, g_out, b_out,
     
-    output logic [9:0] x_out,
-    output logic [8:0] y_out,
+    output logic [10:0] x_out,
+    output logic [10:0] y_out,
     
     output logic valid_int_out
     
@@ -229,7 +229,7 @@ assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 reg [10:0] x;  // Will want to take input for x and y to get screen dimensions
 reg [10:0] y;
 
-wire first = (x == 0) & (y==0);
+wire first = (x == 0) & (y == 0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
 //wire [7:0] frame = regfile[0];

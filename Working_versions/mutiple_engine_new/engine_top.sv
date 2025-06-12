@@ -1,9 +1,9 @@
 module engine_top #(
-    parameter   SCREEN_WIDTH  = 640,
-    parameter   SCREEN_HEIGHT = 480,
+    parameter   SCREEN_WIDTH  = 960,
+    parameter   SCREEN_HEIGHT = 720,
     parameter   NUM_ENGINES = 5,
     parameter   MAX_ITER = 200,
-    parameter   DATA_WIDTH = 29, //y (9 bits) + x (10 bits) + depth (10 bits)
+    parameter   DATA_WIDTH = 32, //y (11 bits) + x (11 bits) + depth (10 bits)
     parameter   ZOOM = 1,
     // parameter   ZOOM_RECIPROCAL = 32'h00000001, // 1/ZOOM in Qm.n format
     parameter   REAL_CENTER = 32'hC0000000, // in Q4.28 format
@@ -14,8 +14,8 @@ module engine_top #(
 )(
     input logic clk,
     input logic reset,
-    input logic [9:0] pixel_x, //x coordinate from pixel_gen
-    input logic [8:0] pixel_y, //y coordinate from pixel_gen
+    input logic [10:0] pixel_x, //x coordinate from pixel_gen
+    input logic [10:0] pixel_y, //y coordinate from pixel_gen
     input logic init_start, //start the module
     input logic ready, //pixel_gen ready 
     //input logic [8:0] pixel_y, //
@@ -29,18 +29,18 @@ module engine_top #(
 logic [NUM_ENGINES-1:0] engine_start; // Signal to start each engine
 logic [NUM_ENGINES-1:0] engine_done; //hmm
 logic [NUM_ENGINES-1:0] engine_written; // if engine has written to fifo
-logic [9:0] next_x; // next x coordinate to assign to the engines
-logic [8:0] y;
-logic [9:0] engine_x [NUM_ENGINES-1:0]; // x assigned to each engine
-logic [8:0] engine_y [NUM_ENGINES-1:0]; 
+logic [10:0] next_x; // next x coordinate to assign to the engines
+logic [10:0] y;
+logic [10:0] engine_x [NUM_ENGINES-1:0]; // x assigned to each engine
+logic [10:0] engine_y [NUM_ENGINES-1:0]; 
 logic [NUM_ENGINES-1:0] fifo_full, fifo_empty;
-logic [9:0] fifo_out_x [NUM_ENGINES-1:0]; // x coordinate from each engine
-logic [8:0] fifo_out_y [NUM_ENGINES-1:0]; // y coordinate from each engine
+logic [10:0] fifo_out_x [NUM_ENGINES-1:0]; // x coordinate from each engine
+logic [10:0] fifo_out_y [NUM_ENGINES-1:0]; // y coordinate from each engine
 logic [9:0] fifo_out_depth [NUM_ENGINES-1:0]; //depth from each engine
 logic [NUM_ENGINES-1:0] fifo_ren; // Read enable for each FIFO
   
-logic [9:0] temp_x;
-logic [8:0] temp_y;
+logic [10:0] temp_x;
+logic [10:0] temp_y;
 
 logic started; // Signal to indicate if the module has started
 
@@ -100,15 +100,17 @@ generate
         
         wire [WORD_LENGTH-1:0] re_c, im_c;
         wire [9:0] engine_depth; //to fifo
-        wire [28:0] fifo_dout; //10 bits for depth, 10 bits for x, 9 bits for 
+        wire [31:0] fifo_dout; //10 bits for depth, 11 bits for x, 11 bits for y
         wire fifo_wen; // 
-        assign fifo_out_x[i] = fifo_dout[19:10]; // Extract x coordinate from FIFO output
-        assign fifo_out_y[i] = fifo_dout[28:20]; // Extract y coordinate from FIFO output
+        assign fifo_out_x[i] = fifo_dout[20:10]; // Extract x coordinate from FIFO output
+        assign fifo_out_y[i] = fifo_dout[31:21]; // Extract y coordinate from FIFO output
         assign fifo_out_depth[i] = fifo_dout[9:0]; // Extract depth from FIFO output
 
         pixel_to_complex #(
             .WORD_LENGTH(WORD_LENGTH),
-            .FRAC(FRAC)
+            .FRAC(FRAC),
+            .SCREEN_WIDTH(SCREEN_WIDTH),
+            .SCREEN_HEIGHT(SCREEN_HEIGHT)
         )  mapper (
             .ZOOM(ZOOM),
             //.ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),

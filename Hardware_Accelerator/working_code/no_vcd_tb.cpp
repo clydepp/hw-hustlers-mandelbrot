@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 
-#define ENDTIME 180000000
+#define ENDTIME 800000000
 
 int main(int argc, char **argv, char **env)
 {
