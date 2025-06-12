@@ -24,9 +24,9 @@ export default function CascadeButton (props){
 
   const handleColourHover = (colourScheme) => {
   if (props.onSchemeChange && !props.showNumbers) {
-    props.onSchemeChange(colourScheme);
-  }
-};
+      props.onSchemeChange(colourScheme);
+    } 
+  };
 
   return (
     <div 
@@ -48,7 +48,7 @@ export default function CascadeButton (props){
           "opacity": (isHovered() && !props.showNumbers) ? "1" : "0",
           "transform": (isHovered() && !props.showNumbers) ? "scaleX(1)" : "scaleX(0)",
           "max-width": (isHovered() && !props.showNumbers) ? "200px" : "0px",
-          "margin-left": (isHovered() && !props.showNumbers) ? "8px" : "0px"
+          "margin-left": (isHovered() && !props.showNumbers) ? "4px" : "0px"
         }}
       >
         <Button 
