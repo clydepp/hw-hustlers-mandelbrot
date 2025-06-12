@@ -167,6 +167,7 @@ always_comb begin
     match_found = 0;
     matched_engine = 0;
     valid_int = 0; // Default to not valid
+    depth_out = '0; 
 
     for (int j = 0; j < NUM_ENGINES; j++) begin
         if (!fifo_empty[j] && fifo_out_x[j] == pixel_x && fifo_out_y[j] == pixel_y && !match_found) begin
