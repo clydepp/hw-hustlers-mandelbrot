@@ -5,15 +5,14 @@ module depth_engine #(
     input logic              sysclk,
     input logic              start,         // Controls when we begin calculating
     input logic              reset,
-    input logic [9:0]        x,
-    input logic [8:0]        y,
     input logic [9:0]        max_iter,
-    input logic              eol,        // REMOVED - This was part of the original bug
- 
+    input logic              fifo_full,
     input logic [WORD_LENGTH-1:0]       re_c,
     input logic [WORD_LENGTH-1:0]       im_c,
     output logic [9:0]       final_depth,
-    output logic             done
+    output logic             done,
+    output logic             fifo_wen,      // Write enable for FIFO
+    output logic                written //written to fifo
 );
 
 typedef enum {
@@ -21,7 +20,8 @@ typedef enum {
   ITER_1,
   ITER_2,
   ITER_3,
-  FINISHED
+  FINISHED,
+  WAIT_FIFO
 } my_states;
 
 my_states current_state, next_state;
@@ -56,7 +56,7 @@ always_ff @(posedge sysclk) begin
         // re_z <= 0;
         // im_z <= 0;
         // depth <= 0;
-        done <= 0;
+        done <= 0; 
         // final_depth <= 0;
         // cross_product <= 0; 
         // pr0 <= 0; pr1 <= 0; pr2 <= 0;
@@ -71,9 +71,6 @@ always_ff @(posedge sysclk) begin
     current_state <= next_state;
     case(current_state)
         IDLE: begin
-            if(eol) begin
-                done <= 0;
-            end
             if(start) begin
                 re_z <= 0;
                 im_z <= 0;
@@ -123,7 +120,18 @@ always_ff @(posedge sysclk) begin
         FINISHED: begin
             done <= 1;
             final_depth <= depth;
+            if(fifo_full) begin
+                fifo_wen <= 0; // Do not write to FIFO if it is full
+            end else begin
+                fifo_wen <= 1; // Write to FIFO if it is not full
+                written <= 1; // Indicate that data has been written to FIFO
+            end
             // final_depth <= depth-1;
+        end
+
+        WAIT_FIFO: begin
+            fifo_wen <= 0; 
+            written <= 0; // Indicate that data has been written to FIFO
         end
 
         default: begin
@@ -142,7 +150,8 @@ always_comb begin
     logic escaped;
     escaped = (re_z_2 + im_z_2) > THRESHOLD;
     next_state = current_state;
-    
+    //assign written = 0; // Default value for written signal
+    //assign fifo_wen = 0; 
     case(current_state)
         IDLE: begin
             if(start) next_state = ITER_1;
@@ -158,6 +167,10 @@ always_comb begin
             else next_state = ITER_1;
         end
         FINISHED: begin
+            if(fifo_full) next_state = FINISHED; 
+            else next_state = WAIT_FIFO; //assign fifo_wen = 1; assign written = 1; // Indicate that data has been written to FIFO
+        end
+        WAIT_FIFO: begin
             next_state = IDLE;
         end
         default: next_state = IDLE;

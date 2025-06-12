@@ -21,60 +21,60 @@
 
 
 module pixel_generator(
-input           out_stream_aclk,
-input           s_axi_lite_aclk,
-input           axi_resetn,
-input           periph_resetn,
-
-//Stream output
-output [31:0]   out_stream_tdata,
-output [3:0]    out_stream_tkeep,
-output          out_stream_tlast,
-input           out_stream_tready,
-output          out_stream_tvalid,
-output [0:0]    out_stream_tuser, 
-
-//AXI-Lite S
-input [AXI_LITE_ADDR_WIDTH-1:0]     s_axi_lite_araddr,
-output          s_axi_lite_arready,
-input           s_axi_lite_arvalid,
-
-input [AXI_LITE_ADDR_WIDTH-1:0]     s_axi_lite_awaddr,
-output          s_axi_lite_awready,
-input           s_axi_lite_awvalid,
-
-input           s_axi_lite_bready,
-output [1:0]    s_axi_lite_bresp,
-output          s_axi_lite_bvalid,
-
-output [31:0]   s_axi_lite_rdata,
-input           s_axi_lite_rready,
-output [1:0]    s_axi_lite_rresp,
-output          s_axi_lite_rvalid,
-
-input  [31:0]   s_axi_lite_wdata,
-output          s_axi_lite_wready,
-input           s_axi_lite_wvalid,
-
-// //Added below to make visible for testing
-
-output logic [7:0] r_out, g_out, b_out,
-
-output logic [9:0] x_out,
-output logic [8:0] y_out,
-
-output logic valid_int_out
-
-//driven in parallel_engine
-// output [11:0]   bram_addr_a,
-// output          bram_clk_a,
-// output [31:0]   bram_wrdata_a,
-// input  [31:0]   bram_rddata_a,
-// output          bram_en_a,
-// output          bram_rst_a,
-// output [3:0]    bram_we_a
-);
-
+    input           out_stream_aclk,
+    input           s_axi_lite_aclk,
+    input           axi_resetn,
+    input           periph_resetn,
+    
+    //Stream output
+    output [31:0]   out_stream_tdata,
+    output [3:0]    out_stream_tkeep,
+    output          out_stream_tlast,
+    input           out_stream_tready,
+    output          out_stream_tvalid,
+    output [0:0]    out_stream_tuser, 
+    
+    //AXI-Lite S
+    input [AXI_LITE_ADDR_WIDTH-1:0]     s_axi_lite_araddr,
+    output          s_axi_lite_arready,
+    input           s_axi_lite_arvalid,
+    
+    input [AXI_LITE_ADDR_WIDTH-1:0]     s_axi_lite_awaddr,
+    output          s_axi_lite_awready,
+    input           s_axi_lite_awvalid,
+    
+    input           s_axi_lite_bready,
+    output [1:0]    s_axi_lite_bresp,
+    output          s_axi_lite_bvalid,
+    
+    output [31:0]   s_axi_lite_rdata,
+    input           s_axi_lite_rready,
+    output [1:0]    s_axi_lite_rresp,
+    output          s_axi_lite_rvalid,
+    
+    input  [31:0]   s_axi_lite_wdata,
+    output          s_axi_lite_wready,
+    input           s_axi_lite_wvalid,
+    
+    // //Added below to make visible for testing
+    
+    output logic [7:0] r_out, g_out, b_out,
+    
+    output logic [9:0] x_out,
+    output logic [8:0] y_out,
+    
+    output logic valid_int_out
+    
+    //driven in parallel_engine
+    // output [11:0]   bram_addr_a,
+    // output          bram_clk_a,
+    // output [31:0]   bram_wrdata_a,
+    // input  [31:0]   bram_rddata_a,
+    // output          bram_en_a,
+    // output          bram_rst_a,
+    // output [3:0]    bram_we_a
+    );
+    
 localparam X_SIZE = 640;
 localparam Y_SIZE = 480;
 parameter  REG_FILE_SIZE = 8;
@@ -96,7 +96,7 @@ localparam AXI_ERR = 2'b10;
 
 // Added localparams to be interfaced with overlay
 
-  
+    
 
 localparam MAX_ITER = 256;
 localparam MAX_ITER_LOG = 8; // log2(MAX_ITER) = 8 for 256 iterations
@@ -107,8 +107,8 @@ localparam ZOOM_RECIPROCAL = 32'd1<<(FRAC - 1); // Reciprocal of zoom in Q-forma
 localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2)));
 localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10;
 localparam [15:0] MAX_ITER_RECIPROCAL = (MAX_ITER != 0)
-      ? ( (32'd1 << 16) / MAX_ITER )
-      : {16{1'b0}};  
+        ? ( (32'd1 << 16) / MAX_ITER )
+        : {16{1'b0}};  
 
 // localparam NUM_ENGINES = 1; 
 
@@ -235,13 +235,8 @@ wire lasty = (y == Y_SIZE - 1);
 //wire [7:0] frame = regfile[0];
 wire ready;
 
-reg start;
-wire done;
-reg [9:0] results [X_SIZE-1:0]; //640 pixels, 10 bit depth
-// reg [9:0] results [63:0];
-wire [9:0] results_din; 
-wire [$clog2(X_SIZE)-1:0] results_addr; 
-wire results_we;
+wire data_avail;
+wire [9:0] final_depth; // Final depth to be used for color mapping
 
 engine_top#(
     .FRAC(FRAC),
@@ -253,13 +248,15 @@ engine_top#(
 ) parallel_engine (
     .clk(out_stream_aclk),
     .reset(!periph_resetn),
-    .start(start), ///--------------------------------------------------
-    .module_done(done),
-    .depth_out(results_din),
-    .we_out(results_we),
-    .addr_out(results_addr),
     .pixel_x(x),
-    .init_start(init_started)
+    .pixel_y(y),
+    .init_start(init_started),
+    //.start(start), ///--------------------------------------------------
+    //.module_done(done),
+    .ready(ready),
+    .valid_int(valid_int),
+    .depth_out(final_depth)
+    
     // .bram_addr_a(bram_addr_a),
     // .bram_clk_a(bram_clk_a),
     // .bram_wrdata_a(bram_wrdata_a),
@@ -273,151 +270,149 @@ reg init_started = 0;
 //engine start logic 
 always @(posedge out_stream_aclk) begin
     if (!periph_resetn) begin
-        start <= 0;
         init_started <= 0;
     end else if (!init_started) begin
-        start <= 1;
         init_started <= 1;
-    end else if (lastx) begin
-        start <= 1;
-    end else begin
-        start <= 0;
-    end
-end
-
-integer i;
-
-//write results each line
-always @(posedge out_stream_aclk) begin
-    // if (!periph_resetn) begin
-    //     for(i=0; i < 640; i = i + 1) begin
-    //         results[i] = 10'd0;
-    //     end
-    // end 
-    // else 
-    if (results_we) begin
-        results[results_addr] <= results_din;
     end
 end
 
 // state machine for table lookup
-localparam LUT_IDLE = 2'b00;
-localparam LUT_LOOKUP = 2'b01;
+localparam OUT_IDLE = 2'b00;
+localparam OUT_CONT = 2'b01;
 localparam LUT_DONE = 2'b10;
 
-reg [1:0] lut_state = LUT_IDLE;
+reg [1:0] out_state = OUT_IDLE;
 
 reg valid_int;
-reg lut_en; 
-reg [9:0] final_depth; // Final depth to be used for color mapping
-
-//always @(posedge out_stream_aclk) begin
-    //     if (periph_resetn) begin
-    //         if (ready & valid_int) begin
-    //             if (lastx) begin
-    //                 x <= 9'd0;
-    //                 if (lasty) y <= 9'd0;
-    //                 else y <= y + 9'd1;
-    //             end
-    //             else x <= x + 9'd1;
-    //         end
-    //     end
-    //     else begin
-    //         x <= 0;
-    //         y <= 0;
-    //     end
-    // end
-
-
+// reg lut_en; 
+// always @(posedge out_stream_aclk) begin
+//     if (!periph_resetn) begin
+//         valid_int <= 0;
+//         x <= 0;
+//         y <= 0;
+//         out_state <= OUT_IDLE;
+//     end
+//     else begin
+//         case(out_state) 
+//             OUT_IDLE: begin
+//                 valid_int <= 0; // Disable output until data is available
+//                 if (data_avail) begin
+//                     out_state <= OUT_CONT; 
+//                     valid_int <= 1; // Enable output when data is available
+//                 end
+//             end
+//             OUT_CONT: begin
+//                 if(ready & valid_int) begin
+//                     if(lastx) begin
+//                         x <= 9'd0;
+//                         if (lasty) begin
+//                             y <= 9'd0;
+//                         end else begin
+//                             y <= y + 1;
+//                         end
+//                     end else begin
+//                         x <= x + 1;
+//                     end 
+//                     if(data_avail) begin
+//                         out_state <= OUT_CONT; 
+//                         valid_int <= 1; 
+//                     end else begin
+//                         out_state <= OUT_IDLE;
+//                         valid_int <= 0; 
+//                     end
+//                 end else begin
+//                     valid_int <= 1; 
+//                 end
+//             end
+//             default: begin
+//                 out_state <= OUT_IDLE; // Reset to idle state if an unexpected state occurs
+//                 valid_int <= 0; // Disable output in default case
+//             end
+//         endcase
+//     end    
+// end
 
 always @(posedge out_stream_aclk) begin
-    if(!periph_resetn) begin
-        lut_state <= LUT_IDLE;
+    if (!periph_resetn) begin  
         x <= 0;
         y <= 0;
-        //start <= 0;
-        lut_en <= 0; 
     end
     else begin
-        //start <= 0; 
-        lut_en <= 0; 
-
-        case(lut_state)
-            LUT_IDLE: begin
-                
-                lut_state <= LUT_IDLE; // Stay in idle state until start signal
-                lut_en <= 0; // Disable LUT lookup
-
-                if(done) begin
-                    lut_state <= LUT_LOOKUP;
-                    x <= 0;
-                    lut_en <= 1; 
-                    final_depth <= results[x]; //process x=0 correctly
-                    //lut_depth <= results[0]; // Start with the first pixel
-                end
+        if (ready & valid_int) begin
+            if (lastx) begin
+                x <= 9'd0;
+                if (lasty) y <= 9'd0;
+                else y <= y + 9'd1;
             end
-            LUT_LOOKUP: begin
-                final_depth <= results[x];
-                lut_state <= LUT_DONE;
-                x <= 0; // 1 cycle for lut_en, 1 cycle for result to be output
-                lut_en <= 1; // Enable the LUT lookup
-            end
-            LUT_DONE: begin
-                if(ready & valid_int) begin
-                    if(lastx) begin
-                        x <= 0;
-                        //start <= 1; // Signal the engine to start processing the next line
-                        lut_en <= 0; // Disable LUT lookup 
-                        if(lasty) begin
-                            y <= 0;
-                        end
-                        else begin
-                            y <= y + 1;
-                        end
-                        lut_state <= LUT_IDLE; // Go back to idle after processing a line
-                    end
-                    else begin
-                        final_depth <= results[x];  
-                        x <= x + 1; // Move to the next pixel
-                        lut_en <= 1; // Enable the LUT lookup for the next pixel
-                    end
-                end else begin
-                    final_depth <= results[x]; // Keep the same depth if not ready
-                    lut_en <= 1; // Keep LUT enabled to process the same pixel
-                end
-            end
-            default: begin
-                lut_state <= LUT_IDLE; // or safe reset state
-            end
-        endcase            
+            else x <= x + 9'd1;
+        end
     end
 end
 
-// table_color lut_table (
-//     .clk(out_stream_aclk),
-//     .depth(final_depth),
-//     .max_iterations(MAX_ITER),
-//     .max_iter_recip(MAX_ITER_RECIPROCAL),
-//     .en(lut_en),
-//     .color(color),
-//     .valid(valid_int)
-// );
+// always @(posedge out_stream_aclk) begin
+//     if(!periph_resetn) begin
+//         lut_state <= LUT_IDLE;
+//         x <= 0;
+//         y <= 0;
+//         //start <= 0;
+//         lut_en <= 0; 
+//     end
+//     else begin
+//         //start <= 0; 
+//         lut_en <= 0; 
 
-//wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
-// valid_int high when you have finished generating a pixel
+//         case(lut_state)
+//             LUT_IDLE: begin
+                
+//                 lut_state <= LUT_IDLE; // Stay in idle state until data is available
+//                 lut_en <= 0; // Disable LUT lookup
+
+//                 if(data_avail) begin
+//                     lut_state <= LUT_LOOKUP;
+//                     x <= x + 1;
+//                     lut_en <= 1; 
+//                     final_depth <= results[x]; //process x=0 correctly
+//                     //lut_depth <= results[0]; // Start with the first pixel
+//                 end
+//             end
+//             LUT_LOOKUP: begin
+//                 final_depth <= results[x];
+//                 lut_state <= LUT_DONE;
+//                 x <= 0; // 1 cycle for lut_en, 1 cycle for result to be output
+//                 lut_en <= 1; // Enable the LUT lookup
+//             end
+//             LUT_DONE: begin
+//                 if(ready & valid_int) begin
+//                     if(lastx) begin
+//                         x <= 0;
+//                         //start <= 1; // Signal the engine to start processing the next line
+//                         lut_en <= 0; // Disable LUT lookup 
+//                         if(lasty) begin
+//                             y <= 0;
+//                         end
+//                         else begin
+//                             y <= y + 1;
+//                         end
+//                         lut_state <= LUT_IDLE; // Go back to idle after processing a line
+//                     end
+//                     else begin
+//                         final_depth <= results[x];  
+//                         x <= x + 1; // Move to the next pixel
+//                         lut_en <= 1; // Enable the LUT lookup for the next pixel
+//                     end
+//                 end else begin
+//                     final_depth <= results[x]; // Keep the same depth if not ready
+//                     lut_en <= 1; // Keep LUT enabled to process the same pixel
+//                 end
+//             end
+//             default: begin
+//                 lut_state <= LUT_IDLE; // or safe reset state
+//             end
+//         endcase            
+//     end
+// end
 
 wire [7:0] r, g, b, intensity, color;
-always @(posedge out_stream_aclk) begin
-    if (lut_en) begin
-        valid_int <= 1'b1; // Set valid_int high when done
-    end
-    else begin
-        valid_int <= 1'b0; // Reset valid_int otherwise
-    end
-end
-// assign r = color[23:16];
-// assign g = color[15:8];
-// assign b = color[7:0];
 
 assign r_out = r;
 assign g_out = g;
@@ -425,14 +420,16 @@ assign b_out = b;
 
 assign x_out = x;
 assign y_out = y;
+assign valid_int_out = valid_int;
+
 assign b = intensity;
 assign g = intensity;
 assign r = intensity;
 assign color = (final_depth >= MAX_ITER) ? 255 :
-                   ((MAX_ITER_LOG > 8) ? (final_depth >> (MAX_ITER_LOG - 8)) :
-                                          (final_depth << (8 - MAX_ITER_LOG)));
+                    ((MAX_ITER_LOG > 8) ? (final_depth >> (MAX_ITER_LOG - 8)) :
+                                            (final_depth << (8 - MAX_ITER_LOG)));
 assign intensity = 255 - color; // Invert the color for visualization   
-assign valid_int_out = valid_int;
+
 
 // If you can't see something on the top level look to make sure all signals connected properly
 
@@ -477,9 +474,9 @@ assign valid_int_out = valid_int;
 packer pixel_packer(    .aclk(out_stream_aclk),
                         .aresetn(periph_resetn),
                         .r(r), .g(g), .b(b),
-                        .eol(lastx), .in_stream_ready(ready), .valid_int(valid_int), .lut_en(lut_en), .sof(first),
+                        .eol(lastx), .in_stream_ready(ready), .valid(valid_int), .sof(first),
                         .out_stream_tdata(out_stream_tdata), .out_stream_tkeep(out_stream_tkeep),
                         .out_stream_tlast(out_stream_tlast), .out_stream_tready(out_stream_tready),
                         .out_stream_tvalid(out_stream_tvalid), .out_stream_tuser(out_stream_tuser) );
- 
+    
 endmodule
