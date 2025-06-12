@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 
-#define ENDTIME 10000000
+#define ENDTIME 45000000
 
 int main(int argc, char **argv, char **env)
 {
@@ -59,10 +59,6 @@ int main(int argc, char **argv, char **env)
             break;
         }
 
-        if (simcyc % 100000 == 0)
-        {
-            std::cout << "Cycle: " << simcyc << std::endl;
-        }
     }
 
     tfp->close();

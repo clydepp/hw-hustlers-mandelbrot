@@ -4,17 +4,17 @@
 #include <iostream>
 #include <fstream>
 
-#define ENDTIME 300000000
+#define ENDTIME 10000000
 
 int main(int argc, char **argv, char **env)
 {
     Verilated::commandArgs(argc, argv);
     Vtop *top = new Vtop;
 
-    // Verilated::traceEverOn(true);
-    // VerilatedVcdC *tfp = new VerilatedVcdC;
-    // top->trace(tfp, 99);
-    // tfp->open("AXIS_tb_new.vcd");
+    Verilated::traceEverOn(true);
+    VerilatedVcdC *tfp = new VerilatedVcdC;
+    top->trace(tfp, 99);
+    tfp->open("AXIS_tb_new.vcd");
 
     // Open CSV file
     std::ofstream csv("pixels.csv");
@@ -26,10 +26,10 @@ int main(int argc, char **argv, char **env)
 
     for (int i = 0; i < 2; i++)
     {
-        // tfp->dump(2 * i);
+        tfp->dump(2 * i);
         top->clk = !top->clk;
         top->eval();
-        // tfp->dump(2 * i + 1);
+        tfp->dump(2 * i + 1);
         top->clk = !top->clk;
         top->eval();
     }
@@ -41,7 +41,7 @@ int main(int argc, char **argv, char **env)
     {
         for (int tick = 0; tick < 2; ++tick)
         {
-            // tfp->dump(2 * simcyc + tick);
+            tfp->dump(2 * simcyc + tick);
             top->clk = !top->clk;
             top->eval();
         }
@@ -58,9 +58,14 @@ int main(int argc, char **argv, char **env)
             std::cout << "Simulation finished" << std::endl;
             break;
         }
+
+        if (simcyc % 100000 == 0)
+        {
+            std::cout << "Cycle: " << simcyc << std::endl;
+        }
     }
 
-    // tfp->close();
+    tfp->close();
     csv.close();
     std::cout << "Pixel data written to pixels.csv" << std::endl;
     exit(0);

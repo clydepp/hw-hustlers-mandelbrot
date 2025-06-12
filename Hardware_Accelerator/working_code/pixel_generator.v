@@ -34,18 +34,20 @@ input  [31:0]   s_axi_lite_wdata,
 output          s_axi_lite_wready,
 input           s_axi_lite_wvalid,
 
-// //Added below to make visible for testing
+//Added below to make visible for testing
 
 output logic [7:0] r_out, g_out, b_out,
 
-output logic [9:0] x_out,
-output logic [8:0] y_out,
+output logic [10:0] x_out,
+output logic [10:0] y_out,
 
 output logic valid_int_out
 );
 
-localparam X_SIZE = 640;
-localparam Y_SIZE = 480;
+// Watch out for hardcoding in mandelplot
+localparam X_SIZE = 960;
+localparam Y_SIZE = 720;
+
 parameter  REG_FILE_SIZE = 8;
 localparam REG_FILE_AWIDTH = $clog2(REG_FILE_SIZE);
 parameter  AXI_LITE_ADDR_WIDTH = 8;
@@ -66,21 +68,31 @@ localparam AXI_ERR = 2'b10;
 
 // Added localparams to be interfaced with overlay
 
-localparam MAX_ITER = 250;
 localparam WORD_LENGTH = 32;
-localparam FRAC = 26;
-localparam ZOOM = 32;
-localparam REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
-localparam IMAG_CENTER = (16'd1 <<< FRAC)/10;
+localparam FRAC = 28;
+
+localparam MAX_ITER = 1024;
+localparam MAX_ITER_LOG = 9; // Change in accordance with max_iter
+localparam ZOOM = 4;
+localparam ZOOM_RECIPROCAL = 32'd1<<(FRAC - 1); // Reciprocal of zoom in Q-format
+localparam [WORD_LENGTH-1:0] REAL_CENTER = -(3 * (16'd1 << (FRAC-2))); ;
+localparam [WORD_LENGTH-1:0] IMAG_CENTER = (16'd1 <<< FRAC)/10; 
+
+
+// UNCOMMENT BEFORE COMPILATION
+
+// wire[31:0] MAX_ITER = regfile[0]; // Register to hold the maximum iterations value
+// wire[31:0] MAX_ITER_LOG = regfile[1]; // Register to hold the maximum iterations log value
+// wire[31:0] ZOOM = regfile[2]; // Register to hold the zoom value
+// wire[31:0] REAL_CENTER = regfile[3]; // Register to hold the real center value
+// wire[31:0] IMAG_CENTER = regfile[4]; // Register to hold the imaginary center value
+
+
 // localparam REAL_CENTER = 0;
 // localparam IMAG_CENTER = 0;
-
-// wire [31:0] MAX_ITER = regfile[0];
-// wire [31:0] ZOOM = regfile[1];
-// wire [31:0] REAL_CENTER = regfile[2];
-// wire [31:0] IMAG_CENTER = regfile[3];
-
-
+// wire [RECIP_W-1:0] max_iter_recip = (max_iterations != 0)
+//       ? ( (32'd1 << RECIP_W) / max_iterations )
+//       : {RECIP_W{1'b0}};
 reg [31:0]                          regfile [REG_FILE_SIZE-1:0];
 reg [REG_FILE_AWIDTH-1:0]           writeAddr, readAddr;
 reg [31:0]                          readData, writeData;
@@ -195,24 +207,23 @@ assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 
 
-reg [9:0] x;  // Will want to take input for x and y to get screen dimensions
-reg [8:0] y;
+reg [10:0] x;  // Will want to take input for x and y to get screen dimensions
+reg [10:0] y;
 
 wire first = (x == 0) & (y==0);
 wire lastx = (x == X_SIZE - 1);
 wire lasty = (y == Y_SIZE - 1);
-//wire [7:0] frame = regfile[0];
 wire ready;
 
 always @(posedge out_stream_aclk) begin
     if (periph_resetn) begin
         if (ready & valid_int) begin
             if (lastx) begin
-                x <= 9'd0;
-                if (lasty) y <= 9'd0;
-                else y <= y + 9'd1;
+                x <= 32'd0;
+                if (lasty) y <= 32'd0;
+                else y <= y + 32'd1;
             end
-            else x <= x + 9'd1;
+            else x <= x + 32'd1;
         end
     end
     else begin
@@ -221,28 +232,14 @@ always @(posedge out_stream_aclk) begin
     end
 end
 
-
-// Need to define all logic
-
-// Idea for simulation: Make valid_int high after 100 clock cycles once final values been established
-
 wire [WORD_LENGTH-1:0] re_c, im_c;
-wire [9:0] final_depth;
-wire valid_int;
-
-// reg max_iter [7:0] = 200;
-wire [23:0] color;
-// Idea: delay valid_int by an extra cycle to ensure ready and valid_int both high at the same time
-
-// reg delayed_valid_int;
-
-// always @(posedge out_stream_aclk) begin
-//     delayed_valid_int <= valid_int;
-// end
+wire [10:0] final_depth;
+reg valid_int;
+wire done;
 
 depth_calculator#(
     .FRAC(FRAC), // Fractional bits for Q-format
-    .WORD_LENGTH(WORD_LENGTH) // Word length for Q-format
+    .WORD_LENGTH(WORD_LENGTH) // Word length for Q-format    
 ) u_depth_calc (
   .sysclk       (out_stream_aclk), // system clock
   .start        (ready), // start pulse
@@ -250,58 +247,54 @@ depth_calculator#(
   .re_c         (re_c), // input real part of c (Q-format)
   .im_c         (im_c), // input imag part of c (Q-format)
   .final_depth  (final_depth), // final depth at done [9:0]
-  .done         (valid_int),  // done flag
+  .done         (done),  // done flag
   .max_iter     (MAX_ITER)
 );
 
-pixel_to_complex #(
+
+pixel_to_complex#(
     .WORD_LENGTH(WORD_LENGTH),
     .FRAC(FRAC),
-    .SCREEN_WIDTH(X_SIZE),
-    .SCREEN_HEIGHT(Y_SIZE)
+    .SCREEN_HEIGHT(Y_SIZE),
+    .SCREEN_WIDTH(X_SIZE)
 ) mapper (
     .ZOOM(ZOOM),
     .real_center(REAL_CENTER),
-    .imag_center(IMAG_CENTER),  
+    .imag_center(IMAG_CENTER),
     .clk(out_stream_aclk),
     .rst(~periph_resetn),
     .x(x),
     .y(y),
     .real_part(re_c),
-    .im_part(im_c),
-    .sof(first),
-    .eol(lasty)
+    .im_part(im_c)
 );
 
-
-table_color lut_table (
-    .clk(out_stream_aclk),
-    .depth(final_depth),
-    .max_iterations(MAX_ITER),
-    .en(1'b1),
-    .color(color)
-);
-//wire valid_int = 1'b1;
-//wire start = 1'b1;
-
-//wire valid_int = 1'b1; // Internal signal used to indicate when a new pixel is ready
 // valid_int high when you have finished generating a pixel
-
-
-
+always_ff @(posedge out_stream_aclk) begin
+    if (done) begin
+        valid_int <= 1'b1; // Set valid_int high when done
+    end
+    else begin
+        valid_int <= 1'b0; // Reset valid_int otherwise
+    end
+end
 
 wire [7:0] r, g, b;
-
+wire [7:0] intensity, color;
 // always @(posedge out_stream_aclk) begin
 //     r <= final_depth * 3 / 2;
 //     g <= final_depth * 3 / 2;
 //     b <= final_depth * 3 / 2;
 //     delayed_valid_int <= valid_int;
 // end
-assign b = color[23:16];
-assign g = color[15:8];
-assign r = color[7:0];
 
+assign b = intensity;
+assign g = intensity;
+assign r = intensity;
+assign color = (final_depth >= MAX_ITER) ? 255 :
+                   ((MAX_ITER_LOG > 8) ? (final_depth >> (MAX_ITER_LOG - 8)) :
+                                          (final_depth << (8 - MAX_ITER_LOG)));
+assign intensity = 255 - color; // Invert the color for visualization                                         
 
 
 

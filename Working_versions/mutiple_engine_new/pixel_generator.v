@@ -75,8 +75,8 @@ module pixel_generator(
     // output [3:0]    bram_we_a
     );
     
-localparam X_SIZE = 640;
-localparam Y_SIZE = 480;
+localparam X_SIZE = 960;
+localparam Y_SIZE = 720;
 parameter  REG_FILE_SIZE = 8;
 localparam REG_FILE_AWIDTH = $clog2(REG_FILE_SIZE);
 parameter  AXI_LITE_ADDR_WIDTH = 8;
@@ -98,8 +98,8 @@ localparam AXI_ERR = 2'b10;
 
     
 
-localparam MAX_ITER = 256;
-localparam MAX_ITER_LOG = 8; // log2(MAX_ITER) = 8 for 256 iterations
+localparam MAX_ITER = 512;
+localparam MAX_ITER_LOG = 9; // log2(MAX_ITER) = 8 for 256 iterations
 localparam WORD_LENGTH = 32;
 localparam FRAC = 28;
 localparam ZOOM = 1;
@@ -226,8 +226,8 @@ assign s_axi_lite_bresp = (writeAddr < REG_FILE_SIZE) ? AXI_OK : AXI_ERR;
 
 
 
-reg [9:0] x;  // Will want to take input for x and y to get screen dimensions
-reg [8:0] y;
+reg [10:0] x;  // Will want to take input for x and y to get screen dimensions
+reg [10:0] y;
 
 wire first = (x == 0) & (y==0);
 wire lastx = (x == X_SIZE - 1);
@@ -244,7 +244,9 @@ engine_top#(
     .ZOOM(ZOOM),
     //.ZOOM_RECIPROCAL(ZOOM_RECIPROCAL),
     .REAL_CENTER(REAL_CENTER),
-    .IMAG_CENTER(IMAG_CENTER)
+    .IMAG_CENTER(IMAG_CENTER),
+    .SCREEN_HEIGHT(Y_SIZE),
+    .SCREEN_WIDTH(X_SIZE)
 ) parallel_engine (
     .clk(out_stream_aclk),
     .reset(!periph_resetn),

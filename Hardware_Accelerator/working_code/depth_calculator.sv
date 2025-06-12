@@ -1,26 +1,24 @@
-module depth_engine #(
+module depth_calculator #(
     parameter FRAC = 28,
     parameter WORD_LENGTH = 32
 )(
     input logic                          sysclk,
     input logic                          start,
     input logic                          reset,
-    input logic                          fifo_full,
-    input logic [9:0]                   max_iter,  // Now configurable from registers
+    input logic unsigned [10:0]          x,
+    input logic unsigned [10:0]          y,
+    input logic [10:0]                   max_iter,  // Now configurable from registers
     input logic signed [WORD_LENGTH-1:0] re_c,
     input logic signed [WORD_LENGTH-1:0] im_c,
-    output logic [9:0]                  final_depth,
-    output logic                         done,
-    output logic                         fifo_wen,      // Write enable for FIFO
-    output logic                         written //written to fifo
+    output logic [10:0]                  final_depth,
+    output logic                         done
 );
 
-typedef enum logic [2:0] {
-    IDLE      = 3'd0,
-    WAIT      = 3'd1,
-    ITERATING = 3'd2,
-    FINISHED  = 3'd3,
-    WAIT_FIFO = 3'd4
+typedef enum logic [1:0] {
+    IDLE      = 2'd0,
+    WAIT      = 2'd1,
+    ITERATING = 2'd2,
+    FINISHED  = 2'd3
 } my_states;
 
 my_states current_state, next_state;
@@ -32,7 +30,7 @@ logic signed [2*WORD_LENGTH-1:0] re_z_2;
 logic signed [2*WORD_LENGTH-1:0] im_z_2;
 logic signed [2*WORD_LENGTH-1:0] cp;  // cross product 2 * re_z * im_z
 
-logic [9:0] depth;  // Made wider to match max_iter for comparison
+logic [10:0] depth;  // Made wider to match max_iter for comparison
 
 // Threshold: 4.0 in fixed-point format
 localparam logic [2*WORD_LENGTH-1:0] THRESHOLD = (64'd4 << (2*FRAC));
@@ -66,22 +64,10 @@ always_ff @(posedge sysclk) begin
                 done <= 0;
             end
             
-        FINISHED: begin
-            done <= 1;
-            final_depth <= depth;
-            if(fifo_full) begin
-                fifo_wen <= 0; // Do not write to FIFO if it is full
-            end else begin
-                fifo_wen <= 1; // Write to FIFO if it is not full
-                written <= 1; // Indicate that data has been written to FIFO
+            FINISHED: begin
+                done <= 1;
+                final_depth <= depth;  // Truncate to output width
             end
-            // final_depth <= depth-1;
-        end
-
-        WAIT_FIFO: begin
-            fifo_wen <= 0; 
-            written <= 0; // Indicate that data has been written to FIFO
-        end
             
             default: begin
                 re_z <= re_z;
@@ -112,21 +98,18 @@ always_comb begin
         IDLE: begin
             if(start) next_state = ITERATING;
         end
-
-        WAIT: next_state = ITERATING; 
         
         ITERATING: begin
             if(escaped || (depth >= max_iter)) next_state = FINISHED;
             else next_state = WAIT;
         end
-    
+
+        WAIT: next_state = ITERATING;         
+        
         FINISHED: begin
-            if(fifo_full) next_state = FINISHED; 
-            else next_state = WAIT_FIFO; //assign fifo_wen = 1; assign written = 1; // Indicate that data has been written to FIFO
-        end
-        WAIT_FIFO: begin
             next_state = IDLE;
-        end      
+        end
+        
         default: next_state = IDLE;
     endcase
 end

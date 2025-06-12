@@ -4,7 +4,7 @@ module top#(
     localparam RANDOM_READY = 2,        //Ready signal is true 50% of the time according to pseudo-random sequence
     localparam READY_AFTER_VALID = 3,   //Ready signal goes true after valid is true, then goes false
     
-    parameter READY_MODE = RANDOM_READY,
+    parameter READY_MODE = RANDOM_READY, //Adjustable for different testing modes
 
 
     parameter TIMEOUT = 1000,           //Time to wait for valid to be true
@@ -13,26 +13,24 @@ module top#(
     parameter RND_SEED = 1246504138    //Random seed for ready signal generation
     
 )(
-   input  logic        clk,
+    input  logic        clk,
     input  logic        rst,
-    output logic [31:0] tdata,
-    output logic        valid,
-    output logic        sof,
-    output logic        eol,
-    output logic        ready,
-
-    output logic [7:0] r_out,
-    output logic [7:0] g_out,
-    output logic [7:0] b_out,
-
-    output logic [10:0] x_out,
-    output logic [10:0] y_out,
-    output logic valid_int_out
+    // input  logic        ready,           // Driven from C++ TB
+    // output logic [31:0] tdata,          //packed pixel data
+    // // output logic        eol,
+    // // output logic        valid,
+    // // output logic        sof,
+    output logic [7:0] r,
+    output logic [7:0] g,
+    output logic [7:0] b,
+    output logic [10:0] x,
+    output logic [10:0] y,
+    output logic valid_int
 );
 
 
     //Instantiate the pixel generator
-   // wire  sof, eol;
+    wire valid, sof, eol;
 
     pixel_generator p1 (
 
@@ -42,7 +40,7 @@ module top#(
         .periph_resetn(rst),
 
         //Stream output
-        .out_stream_tdata(tdata),
+        .out_stream_tdata(),
         .out_stream_tkeep(),
         .out_stream_tlast(eol),
         .out_stream_tready(ready),
@@ -71,18 +69,18 @@ module top#(
         .s_axi_lite_wready(),
         .s_axi_lite_wvalid(1'b0),
 
-        .r_out(r_out),
-        .g_out(g_out),
-        .b_out(b_out),
+        .r_out(r),
+        .g_out(g),
+        .b_out(b),
 
-        .x_out(x_out),
-        .y_out(y_out),
-        .valid_int_out(valid_int_out)
+        .x_out(x),
+        .y_out(y),
+        .valid_int_out(valid_int)
     );
 
     //Ready signal generation
     reg [32:0] prbs = RND_SEED;
-    //reg ready = 1'b0;
+    reg ready = 1'b0;
 
     always @(posedge clk) begin
         prbs <= {prbs[31:0], prbs[32] ^ !prbs[19]};
@@ -128,7 +126,7 @@ module top#(
         end
 
         if (valid && ready) begin
-            //$display("Coordinates %0d , %0d", xCount,yCount);
+            
             //Check for Start of Frame (tuser in AXI Stream) on first word of each frame
             if (xCount == 0 && (yCount % Y_SIZE) == 0) begin
                 if (sof) begin
