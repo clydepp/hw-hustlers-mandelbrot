@@ -19,14 +19,8 @@ export default function SideCascade (props) {
         }
     };
 
-    const handleUsageClick = () => {
-        if (props.setIsUsageBlur) {
-            props.setIsUsageBlur(!props.isUsageBlur());
-        }
-    };
-
     return (
-        <div class="grid grid-cols-3 gap-2">
+        <div class="flex flex-row gap-2">  {/* ← Change to flexbox */}
             <Button onClick={handleClick}>
                 { props.showNumbers ? "+10" : (
                     <svg width="20" height="20" data-slot="icon" aria-hidden="true" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

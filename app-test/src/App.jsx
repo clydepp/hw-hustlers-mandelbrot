@@ -1,6 +1,5 @@
 import { createSignal, createEffect, onMount, onCleanup, batch } from 'solid-js';
 import { createMousePosition } from '@solid-primitives/mouse';
-import { createScrollPosition } from '@solid-primitives/scroll';
 
 import Button from './components/Button';
 import CascadeButton from './components/CascadeButton';
@@ -12,59 +11,63 @@ import { useTranslation } from './i18n/useTranslation.js';
 function App() {
   const { t, setLanguage, currentLanguage } = useTranslation();
   
-  const compScroll = createScrollPosition();
   const pos = createMousePosition(window);
+  
+  // Core state
   const [mouseWheelDelta, setMouseWheelDelta] = createSignal(1);
   const [isDarkMode, setIsDarkMode] = createSignal(false);
-  const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [colourScheme, setColourScheme] = createSignal("classic");
-
-  // modal signals
-  const [isOptiModal, setIsOptiModal] = createSignal(false);
-  const [isConfigModal, setIsConfigModal] = createSignal(false);
-  const [isTheoryModal, setIsTheoryModal] = createSignal(false);
-  const [isEBIModal, setIsEBIModal] = createSignal(false);
-  const [isUsageBlur, setIsUsageBlur] = createSignal(false);
-
   const [centerX, setCenterX] = createSignal(-0.5);
   const [centerY, setCenterY] = createSignal(0.0);
-
-  createEffect(() => {
-    console.log(pos.x, pos.y);
-  });
-
-  // Add this effect to toggle the dark class
-  createEffect(() => {
-    if (isDarkMode()) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  });
-
-  onMount(() => {
-    const handleWheel = (event) => {
-      // Reverse scroll direction by negating deltaY
-      const newValue = Math.floor(mouseWheelDelta() + (-event.deltaY) * 0.01);
-      
-      // Cap between 0 and 2^32 (4,294,967,296)
-      const clampedValue = Math.max(0, Math.min(newValue, Math.pow(2, 32)));
-      
-      setMouseWheelDelta(clampedValue);
-      console.log('Mouse wheel:', -event.deltaY, 'Total:', clampedValue);
-    };
-
-    window.addEventListener('wheel', handleWheel);
-    
-    onCleanup(() => {
-      window.removeEventListener('wheel', handleWheel);
-    });
-  });
   
+  // UI state
   const [isCollapsed, setIsCollapsed] = createSignal(false);
   const [showNumbers, setShowNumbers] = createSignal(false);
   const [counter, setCounter] = createSignal(200);
+  
+  // Modal states - combined into object for cleaner management
+  const [modals, setModals] = createSignal({
+    main: false,
+    theory: false,
+    config: false,
+    optimizations: false,
+    accessibility: false,
+    usageBlur: false
+  });
+  
+  // Input tracking
+  const [centerXInput, setCenterXInput] = createSignal(centerX().toFixed(8));
+  const [centerYInput, setCenterYInput] = createSignal(centerY().toFixed(8));
+  
+  // WebSocket
+  const [mandelbrotImage, setMandelbrotImage] = createSignal('');
+  const [websocket, setWebsocket] = createSignal(null);
 
+  // Helper to update modal state
+  const toggleModal = (modal, state = null) => {
+    setModals(prev => ({
+      ...prev,
+      [modal]: state !== null ? state : !prev[modal]
+    }));
+  };
+
+  // Dark mode effect
+  createEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode());
+  });
+
+  // Mouse wheel handler
+  onMount(() => {
+    const handleWheel = (event) => {
+      const newValue = Math.floor(mouseWheelDelta() + (-event.deltaY) * 0.01);
+      setMouseWheelDelta(Math.max(0, Math.min(newValue, Math.pow(2, 32))));
+    };
+
+    window.addEventListener('wheel', handleWheel);
+    onCleanup(() => window.removeEventListener('wheel', handleWheel));
+  });
+
+  // Event handlers - simplified
   const toggleCollapse = () => {
     if (showNumbers()) {
       setCounter(counter() - 10);
@@ -73,72 +76,36 @@ function App() {
     }
   };
 
-  const handlePlusClick = () => {
-    setShowNumbers(!showNumbers());
-  };
+  const handlePlusClick = () => setShowNumbers(!showNumbers());
+  const handlePlusOne = () => setCounter(counter() + 1);
+  const handleMinusOne = () => setCounter(counter() - 1);
+  const handlePlusTen = () => setCounter(counter() + 10);
+  const changeColourScheme = (scheme) => setColourScheme(scheme);
 
-  const handlePlusOne = () => {
-    setCounter(counter() + 1);
-  };
-
-  const handleMinusOne = () => {
-    setCounter(counter() - 1);
-  };
-
-  const handlePlusTen = () => {
-    setCounter(counter() + 10);
-  };
-
-  const handleMinusTen = () => {
-    setCounter(counter() - 10);
-  };
-
-  const changeColourScheme = (scheme) => {
-    setColourScheme(scheme);
-  };
-
-  const [centerXInput, setCenterXInput] = createSignal(centerX().toFixed(8));
-  const [centerYInput, setCenterYInput] = createSignal(centerY().toFixed(8));
-
-  // Updated input handlers
-  const handleCenterXInput = (e) => {
+  // Input handlers - consolidated
+  const createInputHandler = (setter, signalSetter) => (e) => {
     const inputValue = e.target.value;
-    setCenterXInput(inputValue); // Store the raw input
+    setter(inputValue);
     
     const floatValue = parseFloat(inputValue);
     if (!isNaN(floatValue)) {
-      // Only update the actual center if it's a valid number
-      const clampedValue = Math.max(-8.0, Math.min(7.999999999, floatValue));
-      setCenterX(clampedValue);
-    }
-  };
-  
-  const handleCenterYInput = (e) => {
-    const inputValue = e.target.value;
-    setCenterYInput(inputValue); // Store the raw input
-    
-    const floatValue = parseFloat(inputValue);
-    if (!isNaN(floatValue)) {
-      // Only update the actual center if it's a valid number
-      const clampedValue = Math.max(-8.0, Math.min(7.999999999, floatValue));
-      setCenterY(clampedValue);
+      signalSetter(Math.max(-8.0, Math.min(7.999999999, floatValue)));
     }
   };
 
-  // Add effects to sync input fields when values change programmatically
+  const handleCenterXInput = createInputHandler(setCenterXInput, setCenterX);
+  const handleCenterYInput = createInputHandler(setCenterYInput, setCenterY);
+
+  // Sync input fields when values change programmatically
   createEffect(() => {
-    // Update input field when centerX changes from other sources
-    const currentX = centerX().toFixed(8);
     if (document.activeElement?.getAttribute('data-input') !== 'centerX') {
-      setCenterXInput(currentX);
+      setCenterXInput(centerX().toFixed(8));
     }
   });
 
   createEffect(() => {
-    // Update input field when centerY changes from other sources
-    const currentY = centerY().toFixed(8);
     if (document.activeElement?.getAttribute('data-input') !== 'centerY') {
-      setCenterYInput(currentY);
+      setCenterYInput(centerY().toFixed(8));
     }
   });
 
@@ -150,112 +117,91 @@ function App() {
     });
   };
 
-  // ==================================
-
-  const [mandelbrotImage, setMandelbrotImage] = createSignal('');
-  const [websocket, setWebsocket] = createSignal(null);
-
-  // WebSocket connection on mount
+  // WebSocket setup
   onMount(() => {
-    const ws = new WebSocket('ws://192.168.137.146:8000'); // No '/websocket' endpoint
+    const ws = new WebSocket('ws://192.168.137.146:8000');
     
     ws.onopen = () => {
       console.log('Connected to PYNQ WebSocket server!');
       setWebsocket(ws);
     };
 
-    ws.onmessage = (event) => {
-      // Receive base64 image from PYNQ
-      setMandelbrotImage(event.data);
-    };
+    ws.onmessage = (event) => setMandelbrotImage(event.data);
+    ws.onerror = (error) => console.error('WebSocket error:', error);
+    ws.onclose = () => console.log('WebSocket connection closed');
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-
-    onCleanup(() => {
-      if (ws) ws.close();
-    });
+    onCleanup(() => ws?.close());
   });
   
   // Send parameters when they change
   createEffect(() => {
     const ws = websocket();
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      const params = {
-        re_c: centerX(), // Sends regular float
-        im_c: centerY(), // Sends regular float
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        re_c: centerX(),
+        im_c: centerY(),
         zoom: mouseWheelDelta(),
         max_iter: counter(),
         colour_sch: colourScheme()
-      };
-      ws.send(JSON.stringify(params));
+      }));
     }
   });
 
+  // Common input props for reusability
+  const inputProps = {
+    class: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-green-500 focus:outline-none appearance-none",
+    style: { "-webkit-appearance": "none", "-moz-appearance": "textfield" },
+    onFocus: () => setTimeout(() => document.activeElement?.select(), 0),
+    onDblClick: (e) => e.target.select()
+  };
+
+  // Modal button props for reusability
+  const modalButtonClass = "w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700";
+
   return (
     <>
-      {/* Blur Overlay - at App level */}
-      {isUsageBlur() && (
+      {modals().usageBlur && (
         <div 
           class="fixed inset-0 backdrop-blur-md bg-opacity-20 z-40"
-          onClick={() => setIsUsageBlur(false)}
+          onClick={() => toggleModal('usageBlur', false)}
           style={{ "pointer-events": "all" }}
         />
       )}
       
       <style jsx global>{`
-        html, body {
+        html, body, #root {
           margin: 0;
           padding: 0;
           width: 640px;
           height: 480px;
           overflow: hidden;
         }
-        #root {
-          width: 640px;
-          height: 480px;
-        }
         
-        /* Keep UI controls on the left even in RTL mode */
-        .ui-controls {
+        .ui-controls, .coordinates {
           direction: ltr !important;
           left: 0px !important;
           right: auto !important;
         }
-        
-        /* Keep coordinate display on the left in RTL */
-        .coordinates {
-          direction: ltr !important;
-          text-align: left !important;
-          left: 8px !important;
-          right: auto !important;
+
+        button, .button, [role="button"], 
+        button *, .button *, [role="button"] *,
+        .w-12.h-12.flex.items-center.justify-center,
+        svg, emoji {
+          user-select: none !important;
+          cursor: pointer !important;
         }
       `}</style>
 
       <div class={`w-[640px] h-[480px] border overflow-hidden shadow-lg relative ${isDarkMode() ? 'bg-gray-900' : 'bg-white'}`}>
         <div style={{
-          "background-image": mandelbrotImage() ? `url('${mandelbrotImage()}')` : "url('data:image/jpeg;base64,iVBORw0K...')", // Your default image
+          "background-image": `url('${mandelbrotImage() || "data:image/jpeg;base64,iVBORw0K..."}')`,
           "background-size": "cover",
           "background-position": "center",
           "background-repeat": "no-repeat",
           "width": "100%",
           "height": "100%"
         }}>
-          {/* UI Controls - Force left positioning */}
-          <div 
-            class="p-3 ui-controls" 
-            style={{ 
-              position: "absolute", 
-              "z-index": "10",
-              left: "0",
-              right: "auto"
-            }}
-          >
+          <div class="p-3 ui-controls" style={{ position: "absolute", "z-index": "10" }}>
             <div class="flex flex-col items-start gap-3 w-fit">
               <Button onClick={toggleCollapse} isDarkMode={isDarkMode()}>
                 {showNumbers() ? "-10" : (isCollapsed() ? "+" : "-")}
@@ -268,62 +214,48 @@ function App() {
                   "opacity": isCollapsed() ? "0" : "1"
                 }}
               >
-                <div class="relative">
-                  <CascadeButton 
-                    showNumbers={showNumbers()} 
-                    onMinusOne={handleMinusOne}
-                    isDarkMode={isDarkMode()}
-                    onSchemeChange={changeColourScheme}
-                    currentColourScheme={colourScheme()}
-                  />
-                </div>
+                <CascadeButton 
+                  showNumbers={showNumbers()} 
+                  onMinusOne={handleMinusOne}
+                  isDarkMode={isDarkMode()}
+                  onSchemeChange={changeColourScheme}
+                  currentColourScheme={colourScheme()}
+                />
+                
                 <Button onClick={handlePlusClick} isDarkMode={isDarkMode()}>
                   {showNumbers() ? counter() : (
-                    <svg width="20" height="20" data-slot="icon" aria-hidden="true" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   )}
                 </Button>
-                {/* <Button onClick={handlePlusOne} isDarkMode={isDarkMode()}>
-                  {showNumbers() ? "+1" : (
-                    <svg width="20" height="20" data-slot="icon" aria-hidden="true" fill="none" stroke-width="1.5" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  )}
-                </Button> */}
+                
                 <RegionCascade
-                  showNumbers={showNumbers()}
+                  showNumbers={showNumbers()}  
                   onPlusOne={handlePlusOne} 
                   onJump={regionChange}
                   isDarkMode={isDarkMode()}
                 />
-                <div class="w-fit">
-                  <SideCascade
-                    showNumbers={showNumbers()} 
-                    onMinusOne={handlePlusTen}
-                    isDarkMode={isDarkMode()}
-                    setIsDarkMode={setIsDarkMode}
-                    setIsModalOpen={setIsModalOpen}
-                    setIsConfigModal={setIsConfigModal}
-                    isUsageBlur={isUsageBlur}
-                    setIsUsageBlur={setIsUsageBlur}
-                  />
-                </div>
+                
+                <SideCascade
+                  showNumbers={showNumbers()} 
+                  onMinusOne={handlePlusTen}
+                  isDarkMode={isDarkMode()}
+                  setIsDarkMode={setIsDarkMode}
+                  setIsModalOpen={(state) => toggleModal('main', state)}
+                  setIsConfigModal={(state) => toggleModal('config', state)}
+                  isUsageBlur={() => modals().usageBlur}
+                  setIsUsageBlur={(state) => toggleModal('usageBlur', state)}
+                />
               </div>
             </div>
           </div>
           
-          {/* Coordinates - Force left positioning */}
           <div 
             class={`absolute bottom-2 left-3 text-sm font-mono px-2 py-1 rounded coordinates ${
               !isDarkMode() ? 'text-black bg-white/50' : 'text-white bg-black/50'
             }`}
-            style={{ 
-              "z-index": "10",
-              left: "15px",
-              right: "15px"
-            }}
+            style={{ "z-index": "10" }}
           >
             X: {pos.x} Y: {pos.y}<br/>
             {t('zoom')}: {mouseWheelDelta()}
@@ -331,55 +263,31 @@ function App() {
         </div>
       </div>
       
+      {/* Main Modal */}
       <Modal 
         title={t('title')}
         content={
           <div>
             <h3 class="mb-4">{t('subtitle')}</h3>
             <div class="grid grid-cols-2 gap-3">
-              <button
-                type="button" 
-                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setIsTheoryModal(true);
-                }}
-              >
-                {t('theory')}
-              </button>
-              <button 
-                type="button" 
-                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-              >
-                {t('usage')}
-              </button>
-              <button 
-                type="button" 
-                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-                onClick={() => {
-                  setIsOptiModal(true);
-                  setIsModalOpen(false);
-                }}
-              >
-                {t('optimisations')}
-              </button>
-              <button 
-                type="button" 
-                class="w-full py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setIsEBIModal(true);
-                }}
-              >
-                {t('accessibility')}
-              </button>
+              {[
+                { key: 'theory', action: () => { toggleModal('main', false); toggleModal('theory', true); }},
+                { key: 'usage', action: () => {} },
+                { key: 'optimisations', action: () => { toggleModal('main', false); toggleModal('optimizations', true); }},
+                { key: 'accessibility', action: () => { toggleModal('main', false); toggleModal('accessibility', true); }}
+              ].map(item => (
+                <button type="button" class={modalButtonClass} onClick={item.action}>
+                  {t(item.key)}
+                </button>
+              ))}
             </div>
           </div>
         }
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        isOpen={() => modals().main} 
+        onClose={() => toggleModal('main', false)} 
       />
       
+      {/* Other Modals */}
       <Modal 
         title={t('theory')}
         content={
@@ -389,83 +297,42 @@ function App() {
             </pre>
           </div>
         }
-        isOpen={isTheoryModal} 
-        onClose={() => setIsTheoryModal(false)} 
+        isOpen={() => modals().theory} 
+        onClose={() => toggleModal('theory', false)} 
       />
       
       <Modal 
         title={t('manualConfig')}
         content={
-          <div>
-            <div class="grid grid-cols-1 gap-4">
+          <div class="grid grid-cols-1 gap-4">
+            {[
+              { label: 'Re(c):', value: centerXInput, handler: handleCenterXInput, dataInput: 'centerX', placeholder: 'Enter real part (e.g., -0.5)' },
+              { label: 'Im(c):', value: centerYInput, handler: handleCenterYInput, dataInput: 'centerY', placeholder: 'Enter imaginary part (e.g., 0.0)' }
+            ].map(input => (
               <div>
-                <label class="block text-sm font-medium mb-1">Re(c):</label>
+                <label class="block text-sm font-medium mb-1">{input.label}</label>
                 <input
+                  {...inputProps}
                   type="text"
-                  data-input="centerX"
-                  placeholder="Enter real part (e.g., -0.5)"
-                  value={centerXInput()}
-                  onInput={handleCenterXInput}
-                  onFocus={() => {
-                    // Select all text when focused for easy replacement
-                    setTimeout(() => {
-                      if (document.activeElement === event.target) {
-                        event.target.select();
-                      }
-                    }, 0);
-                  }}
-                  onDblClick={(e) => {
-                    // Select all text on double click
-                    e.target.select();
-                  }}
-                  onBlur={() => {
-                    // Format to display value when losing focus
-                    setCenterXInput(centerX().toFixed(8));
-                  }}
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-green-500 focus:outline-none appearance-none"
-                  style={{ "-webkit-appearance": "none", "-moz-appearance": "textfield" }}
+                  data-input={input.dataInput}
+                  placeholder={input.placeholder}
+                  value={input.value()}
+                  onInput={input.handler}
+                  onBlur={() => input.dataInput === 'centerX' ? setCenterXInput(centerX().toFixed(8)) : setCenterYInput(centerY().toFixed(8))}
                 />
               </div>
-              
-              <div>
-                <label class="block text-sm font-medium mb-1">Im(c):</label>
-                <input
-                  type="text"
-                  data-input="centerY"
-                  placeholder="Enter imaginary part (e.g., 0.0)"
-                  value={centerYInput()}
-                  onInput={handleCenterYInput}
-                  onFocus={() => {
-                    // Select all text when focused for easy replacement
-                    setTimeout(() => {
-                      if (document.activeElement === event.target) {
-                        event.target.select();
-                      }
-                    }, 0);
-                  }}
-                  onDblClick={(e) => {
-                    // Select all text on double click
-                    e.target.select();
-                  }}
-                  onBlur={() => {
-                    // Format to display value when losing focus
-                    setCenterYInput(centerY().toFixed(8));
-                  }}
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-green-500 focus:outline-none appearance-none"
-                  style={{ "-webkit-appearance": "none", "-moz-appearance": "textfield" }}
-                />
-              </div>
-            </div>
+            ))}
           </div>
         }
-        isOpen={isConfigModal}
-        onClose={() => setIsConfigModal(false)}
+        isOpen={() => modals().config}
+        onClose={() => toggleModal('config', false)}
       />
+      
       <Modal 
         title={t('optimisations')}
         content={t('optimisationsContent')}
-        isOpen={isOptiModal}
-        onClose={() => setIsOptiModal(false)}
+        isOpen={() => modals().optimizations}
+        onClose={() => toggleModal('optimizations', false)}
       />
       
       <Modal 
@@ -473,16 +340,22 @@ function App() {
         content={
           <div>
             <div class="mb-6">
-              <h4 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Language Settings</h4>
+              <h4 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">
+                {t('languageSettings')} 
+              </h4>
               <select 
                 value={currentLanguage()}
                 onChange={(e) => setLanguage(e.target.value)}
                 class="w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
               >
-                <option value="en">🇺🇸 English</option>
-                <option value="es">🇪🇸 Español</option>
-                <option value="zh">🇨🇳 中文</option>
-                <option value="ar">🇸🇦 العربية</option>
+                {[
+                  { value: 'en', label: '🇺🇸 English' },
+                  { value: 'es', label: '🇪🇸 Español' },
+                  { value: 'zh', label: '🇨🇳 中文' },
+                  { value: 'ar', label: '🇸🇦 العربية' }
+                ].map(lang => (
+                  <option value={lang.value}>{lang.label}</option>
+                ))}
               </select>
             </div>
             
@@ -493,8 +366,8 @@ function App() {
             </div>
           </div>
         }
-        isOpen={isEBIModal}
-        onClose={() => setIsEBIModal(false)}
+        isOpen={() => modals().accessibility}
+        onClose={() => toggleModal('accessibility', false)}
       />
     </>
   );

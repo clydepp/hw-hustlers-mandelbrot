@@ -52,25 +52,22 @@ export default function CascadeButton (props){
         }}
       >
         <Button 
-          customClass="bg-radial-[at_25%_25%] from-white to-zinc-900 to-66%"
+          customClass="bg-radial-[at_25%_25%] from-white to-zinc-900 to-66% hover:brightness-75 transition-all duration-200"
           isDarkMode={props.isDarkMode}
           onMouseEnter={() => handleColourHover('grayscale')}
         >
-          GS
         </Button>
         <Button
-          customClass="bg-radial-[at_65%_25%] from-orange-300 via-blue-500 to-indigo-500 to-90%"
+          customClass="bg-radial-[at_65%_25%] from-orange-300 via-blue-500 to-indigo-500 to-90% hover:brightness-75 transition-all duration-200"
           isDarkMode={props.isDarkMode}
           onMouseEnter={() => handleColourHover('classic')}
         >
-          CL
         </Button>
         <Button
-          customClass="bg-radial-[at_10%_85%] from-purple-800 via-orange-500 to-orange-300 to-90%"
+          customClass="bg-radial-[at_10%_85%] from-purple-800 via-orange-500 to-orange-300 to-90% hover:brightness-75 transition-all duration-200"
           isDarkMode={props.isDarkMode}
           onMouseEnter={() => handleColourHover('sunset')}
         >
-          SS
         </Button>
       </div>
     </div>

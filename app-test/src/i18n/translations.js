@@ -38,7 +38,8 @@ Terms:
 
 The boundary of the Mandelbrot set marks the edge between stability and chaos.`,
     optimisationsContent: "To speedup the Mandelbrot calculation: use GPU acceleration, parallel processing, and optimized algorithms...",
-    accessibilityContent: "Includes multiple language support, colorblind-friendly palettes, and keyboard navigation."
+    accessibilityContent: "Includes multiple language support, colorblind-friendly palettes, and keyboard navigation.",
+    languageSettings: "Language Settings"
   },
   es: {
     title: "Visor de Mandelbrot",
@@ -63,7 +64,8 @@ Para determinar si un punto c está en el conjunto de Mandelbrot:
 3. Si |z| se vuelve mayor que 2, el punto c NO está en el conjunto.
 4. Si |z| permanece menor o igual a 2 después de muchas iteraciones, c probablemente ESTÁ en el conjunto.`,
     optimisationsContent: "Para acelerar el cálculo de Mandelbrot: use aceleración GPU, procesamiento paralelo y algoritmos optimizados...",
-    accessibilityContent: "Incluye soporte para múltiples idiomas, paletas amigables para daltónicos y navegación por teclado."
+    accessibilityContent: "Incluye soporte para múltiples idiomas, paletas amigables para daltónicos y navegación por teclado.",
+    languageSettings: "Configuración de Idioma"
   },
   zh: {
     title: "曼德博集合查看器",
@@ -88,7 +90,8 @@ Para determinar si un punto c está en el conjunto de Mandelbrot:
 3. 如果|z|变得大于2，则点c不在集合中。
 4. 如果|z|在多次迭代后保持小于或等于2，则c可能在集合中。`,
     optimisationsContent: "加速曼德博计算：使用GPU加速、并行处理和优化算法...",
-    accessibilityContent: "包括多语言支持、色盲友好调色板和键盘导航。"
+    accessibilityContent: "包括多语言支持、色盲友好调色板和键盘导航。",
+    languageSettings: "语言设置"
   },
   ar: {
     title: "عارض مجموعة مانديلبروت",
@@ -113,6 +116,7 @@ Para determinar si un punto c está en el conjunto de Mandelbrot:
 3. إذا أصبح |z| أكبر من 2، فإن النقطة c ليست في المجموعة.
 4. إذا بقي |z| أقل من أو يساوي 2 بعد تكرارات كثيرة، فمن المحتمل أن c في المجموعة.`,
     optimisationsContent: "لتسريع حساب مانديلبروت: استخدم تسريع وحدة معالجة الرسومات، والمعالجة المتوازية، والخوارزميات المحسنة...",
-    accessibilityContent: "يتضمن دعم اللغات المتعددة، ولوحات الألوان الصديقة لعمى الألوان، والتنقل بلوحة المفاتيح."
+    accessibilityContent: "يتضمن دعم اللغات المتعددة، ولوحات الألوان الصديقة لعمى الألوان، والتنقل بلوحة المفاتيح.",
+    languageSettings: "إعدادات اللغة"
   }
 };
