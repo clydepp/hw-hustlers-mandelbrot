@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onMount, onCleanup, batch } from 'solid-js';
+import { createSignal, createEffect, onMount, onCleanup, batch, createMemo } from 'solid-js';
 import { createMousePosition } from '@solid-primitives/mouse';
 
 import Button from './components/Button';
@@ -9,6 +9,30 @@ import RegionCascade from './components/RegionCascade';
 import { useTranslation } from './i18n/useTranslation.js';
 
 function App() {
+  // Pixel to complex coordinate conversion
+  const pixel_to_complex = (x, y, zoom, real_center, imag_center) => {
+    const SCREEN_WIDTH = 640;
+    const SCREEN_HEIGHT = 480;
+
+    // Calculate the size of the viewing area in the complex plane
+    const real_width = 3 / (2 ** zoom);
+    const imag_height = 2 / (2 ** zoom);
+
+    // Calculate how much each pixel represents in complex coordinates
+    const step_real = real_width / SCREEN_WIDTH;
+    const step_imag = imag_height / SCREEN_HEIGHT;
+
+    // Find the boundaries of the viewing area
+    const real_min = real_center - real_width / 2;
+    const imag_max = imag_center + imag_height / 2;
+
+    // Convert pixel coordinates to complex coordinates
+    const real = real_min + step_real * x;
+    const imag = imag_max - step_imag * y;  // Note: y-axis is flipped
+
+    return [real, imag];
+  };
+
   const { t, setLanguage, currentLanguage } = useTranslation();
   
   const pos = createMousePosition(window);
@@ -43,6 +67,17 @@ function App() {
   const [mandelbrotImage, setMandelbrotImage] = createSignal('');
   const [websocket, setWebsocket] = createSignal(null);
 
+  // Memoized complex coordinate calculation for performance
+  const currentComplexCoordinates = createMemo(() => {
+    return pixel_to_complex(
+      pos.x || 0,
+      pos.y || 0,
+      mouseWheelDelta(),
+      centerX(),
+      centerY()
+    );
+  });
+
   // Helper to update modal state
   const toggleModal = (modal, state = null) => {
     setModals(prev => ({
@@ -56,11 +91,11 @@ function App() {
     document.documentElement.classList.toggle('dark', isDarkMode());
   });
 
-  // Mouse wheel handler
+  // Mouse wheel handler - capped at 32 with ** operator
   onMount(() => {
     const handleWheel = (event) => {
       const newValue = Math.floor(mouseWheelDelta() + (-event.deltaY) * 0.01);
-      setMouseWheelDelta(Math.max(0, Math.min(newValue, Math.pow(2, 32))));
+      setMouseWheelDelta(Math.max(0, Math.min(newValue, 32)));
     };
 
     window.addEventListener('wheel', handleWheel);
@@ -257,8 +292,17 @@ function App() {
             }`}
             style={{ "z-index": "10" }}
           >
-            X: {pos.x} Y: {pos.y}<br/>
-            {t('zoom')}: {mouseWheelDelta()}
+            {(() => {
+              const [real, imag] = currentComplexCoordinates();
+              return (
+                <>
+                  {/* Pixel: ({pos.x}, {pos.y})<br/> */}
+                  ({real.toFixed(6)})<br/>
+                  ({imag.toFixed(6)}i)<br/>
+                  {t('zoom')}: {2 ** mouseWheelDelta()}
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
