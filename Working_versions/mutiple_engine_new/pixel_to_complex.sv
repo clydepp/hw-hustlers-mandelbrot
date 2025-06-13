@@ -1,53 +1,69 @@
-module pixel_to_complex#(   
+module pixel_to_complex #(
     parameter int WORD_LENGTH = 32,
     parameter int FRAC = 28,
     parameter int SCREEN_WIDTH = 960,
     parameter int SCREEN_HEIGHT = 720
- )(
-    
-    // input int SCREEN_WIDTH,
-    // input int SCREEN_HEIGHT,
-    input  int ZOOM,
-    //input logic unsigned [31:0] ZOOM_RECIPROCAL, // 1/ZOOM in Qm.n format
-    input  logic signed [WORD_LENGTH-1:0] real_center, // in Q4.28
-    input  logic signed [WORD_LENGTH-1:0] imag_center, // 
-    input  logic        clk,
-    input  logic [10:0]  x,
-    input  logic [10:0]  y,
+)(
+    // Interface does NOT change
+    input  logic [31:0] ZOOM,
+    input  logic signed [WORD_LENGTH-1:0] real_center,
+    input  logic signed [WORD_LENGTH-1:0] imag_center,
+    input  logic clk,
+    input  logic rst,
+    input  logic [10:0] x,
+    input  logic [10:0] y,
     output logic signed [WORD_LENGTH-1:0] real_part,
     output logic signed [WORD_LENGTH-1:0] im_part
 );
-    logic signed [WORD_LENGTH-1:0] real_min, real_width;
-    logic signed [WORD_LENGTH-1:0] imag_max, imag_height;
-    logic signed [WORD_LENGTH-1:0] x_scaled, y_scaled;
-    logic signed [(2*WORD_LENGTH)-1:0] x_scaled_temp, y_scaled_temp;
-    logic signed [(2*WORD_LENGTH)-1:0] real_width_temp, imag_height_temp;
-    logic signed [WORD_LENGTH-1:0] one = 1 <<< FRAC;
-    always_comb begin
-        
 
-        //real_width_temp  = (3 * one) >>> ZOOM; // Qm.n * Q0.16 = Qm.n
-       // imag_height_temp = (2 * one) >>> ZOOM; // Qm.n * Q0.16 = Qm.n
-        real_width  = (3 * one) >>> ZOOM; // same for imag_height
-        imag_height = (2 * one) >>> ZOOM; // Qm.n * Q0.16 = Qm.n
-        //imag_height = imag_height_temp >>> FRAC;
+    // --- Signals for High/Low Multiplication ---
+    logic signed [WORD_LENGTH-1:0] step_real, step_imag;
+    logic signed [WORD_LENGTH-1:0] real_min, imag_max;
+    
+    logic signed [24:0] step_real_h, step_imag_h;
+    logic signed [6:0]  step_real_l, step_imag_l;
+
+    // --- Combinational Logic for Setup ---
+    always_comb begin
+        // ... (This logic is fast enough)
+        logic signed [WORD_LENGTH-1:0] real_width = (3 * (1 <<< FRAC)) >>> ZOOM;
+        logic signed [WORD_LENGTH-1:0] imag_height = (2 * (1 <<< FRAC)) >>> ZOOM;
+        
         real_min = real_center - (real_width >>> 1);
         imag_max = imag_center + (imag_height >>> 1);
+        step_real = real_width / SCREEN_WIDTH;
+        step_imag = imag_height / SCREEN_HEIGHT;
+        
+        step_real_h = step_real >>> 7;
+        step_real_l = step_real[6:0];
+        step_imag_h = step_imag >>> 7;
+        step_imag_l = step_imag[6:0];
+    end
 
-        x_scaled_temp = (x * real_width);  // Q11 * Qm.n = Q(m+11).n
-        x_scaled      = x_scaled_temp / SCREEN_WIDTH;  // Truncate back to Qm.n
-       // x_scaled = (x_scaled_temp + (SCREEN_WIDTH >> 1)) / SCREEN_WIDTH;
-        y_scaled_temp = (y * imag_height);
-        y_scaled      = y_scaled_temp / SCREEN_HEIGHT;
-       // y_scaled = (y_scaled_temp + (SCREEN_HEIGHT >> 1)) / SCREEN_HEIGHT;
-       // real_part = real_min + x_scaled;
-       // im_part   = imag_max - y_scaled;
-    end
+    // --- Pipelined Hardware Implementation ---
+    logic signed [42:0] dsp_prod_re, dsp_prod_im;
+    logic signed [17:0] fabric_prod_re, fabric_prod_im;
+    logic signed [WORD_LENGTH-1:0] real_min_reg, imag_max_reg;
+
     always_ff @(posedge clk) begin
-        // Update outputs on clock edge
-        real_part <= real_min + x_scaled;
-        im_part   <= imag_max - y_scaled;
+        if (rst) begin
+            real_part <= 0;
+            im_part <= 0;
+            // ... reset pipeline registers if needed
+        end else begin
+            // --- STAGE 1: Parallel Multiplications ---
+            dsp_prod_re    <= x * step_real_h;
+            fabric_prod_re <= x * step_real_l;
+            dsp_prod_im    <= y * step_imag_h;
+            fabric_prod_im <= y * step_imag_l;
+            real_min_reg   <= real_min;
+            imag_max_reg   <= imag_max;
+
+            // --- STAGE 2: Final Addition ---
+            // The result of this stage will appear on the outputs on the next clock edge
+            real_part <= real_min_reg + ((dsp_prod_re << 7) + fabric_prod_re);
+            im_part   <= imag_max_reg - ((dsp_prod_im << 7) + fabric_prod_im);
+        end
     end
-   // assign real_part = real_min + (x * real_width) / SCREEN_WIDTH;
-   // assign im_part   = imag_max - (y * imag_height) / SCREEN_HEIGHT;
+
 endmodule
