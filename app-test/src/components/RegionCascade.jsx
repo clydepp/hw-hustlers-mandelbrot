@@ -5,27 +5,27 @@ const regions = {
   seahorse: {
     centerX: -0.74,
     centerY: 0.13,
-    zoom: 100
+    zoom: 7
   },
   spiralArms: {
     centerX: -0.15,
     centerY: 0.85,
-    zoom: 50
+    zoom: 5
   },
   minibrot: {
     centerX: -0.235125,
     centerY: 0.827215,
-    zoom: 1000
+    zoom: 10
   },
   scepter: {
     centerX: -1.25,
     centerY: 0.02,
-    zoom: 200
+    zoom: 8
   },
   tripleSpiral: {
     centerX: -0.11,
     centerY: 0.75,
-    zoom: 50
+    zoom: 6
   }
 };
 
