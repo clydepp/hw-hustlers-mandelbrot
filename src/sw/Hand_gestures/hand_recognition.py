@@ -1,8 +1,9 @@
 import cv2
 import mediapipe as mp
 import math
+import time
 
-class GestureZoomPan:
+class GestureZoom:
     def __init__(self):
         self.mp_hands = mp.solutions.hands
         self.hands = self.mp_hands.Hands(max_num_hands=1,
@@ -11,31 +12,40 @@ class GestureZoomPan:
         self.mp_draw = mp.solutions.drawing_utils
 
         self.zoom = 1.0
-        self.pan_x = 0.0
-        self.pan_y = 0.0
-
         self.min_zoom = 0.5
         self.max_zoom = 1.5
 
-    def calculate_distance(self, point1, point2):
-        return math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+        # Zoom counter
+        self.zoom_counter = 1
+        self.last_update_time = time.time()
+
+    def calculate_norm(self, wrist, index_tip):
+        norm = math.sqrt((index_tip.x - wrist.x) ** 2 + (index_tip.y - wrist.y) ** 2)
+        return norm
+
+    def calculate_distance(self, point1, point2, norm):
+        return math.sqrt(((point1.x - point2.x) ** 2 / norm) + ((point1.y - point2.y) ** 2 / norm))
 
     def normalize_zoom(self, distance):
-        # Tune sensitivity here
-        zoom = distance * 6  # empirical scaling factor
-        return max(self.min_zoom, min(self.max_zoom, zoom))
+        if distance > 0.25:
+            return 1.5
+        elif distance < 0.1:
+            return 0.5
+        else:
+            return 1.0
 
-    def detect_pan(self, wrist, index_tip):
-        dx = index_tip.x - wrist.x
-        dy = index_tip.y - wrist.y
-        return dx * 2, dy * 2  # scaled pan values
+    def update_zoom_counter(self):
+        current_time = time.time()
+        if current_time - self.last_update_time >= 2:  # 2s
+            if self.zoom == 1.5:
+                self.zoom_counter += 1
+            elif self.zoom == 0.5:
+                self.zoom_counter = max(1, self.zoom_counter - 1)
+            self.last_update_time = current_time
 
     def run(self):
         cap = cv2.VideoCapture(0)
-        mode = 'zoom'
-
-        print("Spread fingers to zoom (0.5–1.5), point to pan (-1 to 1)")
-        print("Press 'z' for ZOOM mode, 'p' for PAN mode, ESC to exit")
+        print("Show hand to adjust zoom. Zoom counter will update every 2 seconds based on hand position.")
 
         while True:
             ret, frame = cap.read()
@@ -54,46 +64,38 @@ class GestureZoomPan:
                 index_tip = landmarks[8]
                 thumb_tip = landmarks[4]
 
-                if mode == 'zoom':
-                    dist = self.calculate_distance(index_tip, thumb_tip)
-                    self.zoom = self.normalize_zoom(dist)
-
-                elif mode == 'pan':
-                    self.pan_x, self.pan_y = self.detect_pan(wrist, index_tip)
+                dist_norm = self.calculate_norm(wrist, index_tip)
+                dist = self.calculate_distance(index_tip, thumb_tip, dist_norm)
+                self.zoom = self.normalize_zoom(dist)
+                self.update_zoom_counter()
 
                 self.mp_draw.draw_landmarks(frame, hand, self.mp_hands.HAND_CONNECTIONS)
 
-                # Visualize fingertips
                 h, w = frame.shape[:2]
                 for point in [wrist, index_tip, thumb_tip]:
                     cx, cy = int(point.x * w), int(point.y * h)
                     cv2.circle(frame, (cx, cy), 6, (0, 255, 0), -1)
 
-            # Overlay text
-            cv2.putText(frame, f'Mode: {mode.upper()}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 150, 0), 2)
-            cv2.putText(frame, f'Zoom: {self.zoom:.2f}', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-            cv2.putText(frame, f'Pan X: {self.pan_x:.2f}', (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (200, 255, 200), 2)
-            cv2.putText(frame, f'Pan Y: {self.pan_y:.2f}', (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (200, 200, 255), 2)
+            # Counter + Val
+            cv2.putText(frame, f'Zoom Value: {self.zoom:.1f}', (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+            cv2.putText(frame, f'Zoom Counter: {self.zoom_counter}', (10, 70),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
-            # Zoom slider bar
+            # Zoom bar
             zoom_bar_len = int((self.zoom - self.min_zoom) / (self.max_zoom - self.min_zoom) * 200)
             cv2.rectangle(frame, (500, 50), (510, 250), (255, 255, 255), 2)
             cv2.rectangle(frame, (502, 250 - zoom_bar_len), (508, 250), (0, 255, 0), -1)
 
-            cv2.imshow("Hand Zoom & Pan (Mode Switching)", frame)
+            cv2.imshow("Gesture Zoom with Counter", frame)
 
             key = cv2.waitKey(1)
-            if key == 27:
+            if key == 27:  # ESC to exit
                 break
-            elif key == ord('z'):
-                mode = 'zoom'
-                print("Switched to ZOOM mode")
-            elif key == ord('p'):
-                mode = 'pan'
-                print("Switched to PAN mode")
 
         cap.release()
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    GestureZoomPan().run()
+    GestureZoom().run()
+
