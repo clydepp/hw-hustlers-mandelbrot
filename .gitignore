@@ -13,7 +13,7 @@
 *.str
 *.xml
 *.xpr
-*.bit
+
 *.bin
 *.dcp
 *.tcl
@@ -32,7 +32,7 @@
 *.xgui/
 
 # PYNQ overlays
-*.hwh
+
 *.tcl
 *.bit
 *.json
