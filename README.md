@@ -5,11 +5,15 @@ This repository includes source code and most versions of hardware implementatio
 
 Installation instructions will be provided for software usage. 
 
+The report is attached in this branch.
+
 ## Members 
 Clyde Pangilinan - 02381828
-Jack Hollway - 02399831
-Ali Rabie - 02372729
-Alex Brown - 02412227
-Kevin Huang - 02461751
 
-The report is attached in this branch.
+Jack Hollway - 02399831
+
+Ali Rabie - 02372729
+
+Alex Brown - 02412227
+
+Kevin Huang - 02461751
