@@ -7,6 +7,9 @@ Installation instructions will be provided for software usage.
 
 The report is attached in this branch.
 
+Google Drive link to reduced ip project:
+<link>https://drive.google.com/file/d/1qEniCgG6rYXw8ENMW1M4RB_3GrUl3W0D/view?usp=drive_link</link>
+
 ## Members 
 Clyde Pangilinan - 02381828
 
